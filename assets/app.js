@@ -110,7 +110,7 @@ function renderHeute() {
   } else {
     readiness = `<div class="card"><div class="card-h"><h3>Bereitschaft</h3><span class="pill">Garmin</span></div>
       <div class="ring-wrap"><div class="ring">${ring(0, "var(--faint)")}<div class="v"><div><b class="muted">?</b><span>offen</span></div></div></div>
-      <p class="muted">Sobald Garmin über athletedata verbunden ist, siehst du hier jeden Morgen HRV, Ruhepuls, Schlaf und deine Tagesform.</p></div></div>`;
+      <p class="muted">Sobald Garmin über intervals.icu verbunden ist, siehst du hier jeden Morgen HRV, Ruhepuls, Schlaf und deine Tagesform.</p></div></div>`;
   }
 
   // Woche
@@ -249,7 +249,7 @@ function renderFortschritt() {
   const gd = (S.garmin && S.garmin.days) || [];
   const gChart = (key, label, color, unit) => { const pts = gd.filter(d => d[key] != null).slice(-28).map(d => ({ v: d[key], l: fmt(pd(d.date)) })); if (pts.length < 2) return ""; const vs = pts.map(p => p.v); const mn = Math.floor(Math.min(...vs) * .95), mxv = Math.ceil(Math.max(...vs) * 1.05); return `<div class="card chart"><div class="card-h"><h3>${label}</h3><span class="num muted">${pts[pts.length - 1].v}${unit}</span></div>${lineChart(pts, { min: mn, max: mxv, color, label, unit })}</div>`; };
   const garminCharts = gd.length ? gChart("hrv", "HRV", "var(--hyrox)", " ms") + gChart("restingHr", "Ruhepuls", "var(--accent)", " bpm") + gChart("sleepH", "Schlaf", "var(--endurance)", " h") + gChart("runKm", "Laufkilometer pro Tag", "var(--football)", " km")
-    : `<div class="empty span"><b>Garmin Daten folgen.</b><span>So verbindest du Garmin:</span><ol><li>Auf athletedata.health unter Integrations Garmin verbinden (gratis).</li><li>Den MCP Plan starten (7 Tage gratis, danach 9 $ pro Monat).</li><li>Claude Bescheid geben. Die Seite wird danach jeden Morgen aktualisiert.</li></ol></div>`;
+    : `<div class="empty span"><b>Garmin Daten folgen.</b><span>So verbindest du Garmin:</span><ol><li>Gratis Konto auf intervals.icu erstellen und Garmin verbinden.</li><li>API Key und Athleten ID als GitHub Secrets hinterlegen.</li><li>Ab dann holt die Seite die Werte jeden Morgen und Abend automatisch.</li></ol></div>`;
 
   const acts = ((S.garmin && S.garmin.activities) || []).slice(0, 8);
   const logs = L.slice(0, 30).map(l => { const s = sess(l.session); const d = pd(l.date);

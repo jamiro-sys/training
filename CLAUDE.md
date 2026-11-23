@@ -11,8 +11,8 @@ Statische Trainings App (GitHub Pages, Branch `main`, Root). Kein Build Schritt.
 Deutsch (Schweiz). Kein scharfes s (immer "ss"), keine Gedankenstriche (– oder —) und kein " - " als Satzzeichen.
 
 ## Tägliches Update
-1. Daten über den athletedata Connector lesen (cross source Tools bevorzugen: `get_readiness_today`, `get_daily_metrics`, `get_sleep`, `get_analytics_summary`; Aktivitäten über `garmin_get_activities`). Wenn der Connector nur Setup Hinweise liefert: nichts ändern, nur coach.json nicht anfassen und abbrechen.
-2. `data/garmin.json` schreiben:
+1. Garmin Daten kommen automatisch: Der Workflow `.github/workflows/garmin-sync.yml` holt sie zweimal täglich über intervals.icu (`scripts/garmin-sync.mjs`, Secrets `INTERVALS_API_KEY`, `INTERVALS_ATHLETE_ID`) und schreibt `data/garmin.json`. Für das Coaching zuerst `git pull`, dann diese Datei lesen. Ist sie leer (`updated: null`), nichts ändern.
+2. Aufbau von `data/garmin.json`:
    ```json
    {
      "updated": "ISO Zeit",

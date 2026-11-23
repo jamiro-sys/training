@@ -1,0 +1,36 @@
+name: Garmin Sync
+
+on:
+  schedule:
+    - cron: "17 4 * * *"   # täglich ca. 05:17 Uhr Schweizer Winterzeit
+    - cron: "47 16 * * *"  # und am Abend nach dem Training
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: garmin-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Daten von intervals.icu holen
+        env:
+          INTERVALS_API_KEY: ${{ secrets.INTERVALS_API_KEY }}
+          INTERVALS_ATHLETE_ID: ${{ secrets.INTERVALS_ATHLETE_ID }}
+        run: node scripts/garmin-sync.mjs
+      - name: Änderungen speichern
+        run: |
+          if git diff --quiet; then echo "Nichts zu speichern"; exit 0; fi
+          git config user.name "garmin-sync"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/garmin.json
+          git commit -m "Update Garmin $(date -u +%F)"
+          git push

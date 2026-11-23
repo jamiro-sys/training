@@ -1,248 +1,1523 @@
 {
-  "version": 2,
-  "updated": "2026-11-23",
-  "race": { "name": "HYROX Paris Grand Palais", "division": "Doubles", "date": "2027-04-10", "window": "8. bis 12. April 2027" },
-  "season": { "trainingDays": [1, 3], "matchDay": 5 },
-  "phases": [
-    { "id": "basis", "name": "Basis", "from": "2026-11-23", "to": "2026-12-20", "color": "gym",
-      "goal": "Grundkraft an Geräten, Hüfte stark fürs Knie, aerobe Basis auf der Rolle.",
-      "days": [["gA"], ["rolleZ2"], ["gB"], ["knie"], ["laufRW"], ["gC"], ["ruhe"]] },
-    { "id": "festtage", "name": "Festtage", "from": "2026-12-21", "to": "2027-01-03", "color": "rest",
-      "goal": "Lockere Wochen. 3 bis 4 Einheiten reichen, Tage frei schieben.",
-      "days": [["gA"], ["rolleZ2"], ["ruhe"], ["gB"], ["ruhe"], ["laufRW"], ["ruhe"]] },
-    { "id": "vorbereitung", "name": "Vorbereitung", "from": "2027-01-04", "to": "2027-01-17", "color": "endurance",
-      "goal": "Intensität rauf und erste Hyrox Stationen, damit der Fussballstart leicht fällt.",
-      "days": [["gA"], ["rolleInt"], ["gB"], ["knie"], ["laufRW"], ["hx1"], ["ruhe"]] },
-    { "id": "aufbau", "name": "Fussball Vorbereitung + Hyrox Aufbau", "from": "2027-01-18", "to": "2027-02-28", "color": "football",
-      "goal": "Fussball 3 mal pro Woche. Samstag Kraft und Stationen, Sonntag lange Ausdauer.",
-      "deload": ["2027-02-15"],
-      "days": [["fb"], ["fb"], ["knie"], ["fb"], ["ruhe"], ["hx2"], ["ausdLang"]] },
-    { "id": "spezifisch", "name": "Hyrox spezifisch", "from": "2027-03-01", "to": "2027-03-28", "color": "hyrox",
-      "goal": "Laufen unter Vorbelastung und Simulationen mit dem Partner.",
-      "deload": ["2027-03-22"],
-      "days": [["fb"], ["fb"], ["knie"], ["fb"], ["ruhe"], ["hx3"], ["simu"]] },
-    { "id": "taper", "name": "Taper", "from": "2027-03-29", "to": "2027-04-12", "color": "accent",
-      "goal": "Volumen minus 40 Prozent, Intensität halten, frisch nach Paris.",
-      "days": [["fb"], ["fb"], ["knie"], ["fb"], ["ruhe"], ["taper"], ["rolleLocker"]] },
-    { "id": "saison", "name": "Saison", "from": "2027-04-13", "to": "2027-06-30", "color": "football",
-      "goal": "Spiele haben Vorrang. Kraft erhalten, Erholung sichern.",
-      "days": [["gS"], ["fb"], ["rolleLocker"], ["fb"], ["knie"], ["spiel"], ["ruhe"]] }
+ "version": 3,
+ "updated": "2026-11-23",
+ "race": {
+  "name": "HYROX Paris Grand Palais",
+  "division": "Doubles",
+  "date": "2027-04-10",
+  "window": "8. bis 12. April 2027"
+ },
+ "season": {
+  "trainingDays": [
+   1,
+   3
   ],
-  "kneeStages": [
-    { "name": "Gehen und Rad", "text": "Kein Laufen. Rolle, Rudern, SkiErg. Knie Routine täglich." },
-    { "name": "Run Walk kurz", "text": "6 × (3 Min laufen, 1 Min gehen)" },
-    { "name": "Run Walk mittel", "text": "5 × (5 Min laufen, 1 Min gehen)" },
-    { "name": "Run Walk lang", "text": "3 × (10 Min laufen, 1 Min gehen)" },
-    { "name": "Durchlaufen", "text": "30 Min Zone 2 am Stück" },
-    { "name": "Volumen", "text": "40 bis 45 Min Zone 2 plus 4 × 20 s Steigerungen" },
-    { "name": "Tempo", "text": "5 bis 6 × 1 km im Hyrox Tempo, 90 s Pause" }
-  ],
-  "sessions": {
-    "gA": { "name": "Beine und Hüfte", "tag": "Gym A", "type": "gym", "dur": 60,
-      "goal": "Beinkraft an Geräten. Die Hüftmuskeln schützen dein Knie.",
-      "blocks": [
-        { "title": "Aufwärmen", "items": [
-          { "ex": "crosstrainer", "sets": 1, "reps": "8 Min locker" },
-          { "ex": "abductor", "sets": 1, "reps": "20 leicht" } ] },
-        { "title": "Kraft", "items": [
-          { "ex": "legpress", "sets": 4, "reps": "8 bis 10", "rest": 120, "cue": "RPE 7, 2 Wdh in Reserve" },
-          { "ex": "hipthrust", "sets": 3, "reps": "10", "rest": 90 },
-          { "ex": "legcurl", "sets": 3, "reps": "10 bis 12", "rest": 75 },
-          { "ex": "abductor", "sets": 3, "reps": "15", "rest": 60, "cue": "Langsam zurück, 2 s" },
-          { "ex": "legext", "sets": 3, "reps": "12", "rest": 60, "cue": "Nur schmerzfreier Bereich" },
-          { "ex": "calfmachine", "sets": 3, "reps": "12", "rest": 60 } ] },
-        { "title": "Rumpf", "items": [
-          { "ex": "sideplank", "sets": 3, "reps": "30 s je Seite", "rest": 30 } ] }
-      ],
-      "note": "Steigere das Gewicht erst, wenn alle Sätze sauber gehen." },
-    "gB": { "name": "Oberkörper und Rücken", "tag": "Gym B", "type": "gym", "dur": 60,
-      "goal": "Zugkraft und Haltung, gute Basis für Rudern und SkiErg.",
-      "blocks": [
-        { "title": "Aufwärmen", "items": [
-          { "ex": "row", "sets": 1, "reps": "6 Min locker" },
-          { "ex": "facepull", "sets": 1, "reps": "15 leicht" } ] },
-        { "title": "Kraft", "items": [
-          { "ex": "chestpress", "sets": 4, "reps": "8 bis 10", "rest": 90 },
-          { "ex": "latpull", "sets": 4, "reps": "8 bis 10", "rest": 90 },
-          { "ex": "cablerow", "sets": 3, "reps": "10", "rest": 75 },
-          { "ex": "shoulderpress", "sets": 3, "reps": "10", "rest": 75 },
-          { "ex": "facepull", "sets": 3, "reps": "15", "rest": 45 },
-          { "ex": "backext", "sets": 3, "reps": "12", "rest": 60 } ] },
-        { "title": "Finisher", "items": [
-          { "ex": "skierg", "sets": 6, "reps": "1 Min zügig", "rest": 60 } ] }
-      ] },
-    "gC": { "name": "Ganzkörper Zirkel", "tag": "Gym C", "type": "gym", "dur": 60,
-      "goal": "Kraftausdauer und Kalorien, alles an Geräten.",
-      "blocks": [
-        { "title": "Aufwärmen", "items": [
-          { "ex": "row", "sets": 1, "reps": "6 Min locker" } ] },
-        { "title": "Zirkel · 4 Runden, 2 Min Pause", "items": [
-          { "ex": "legpress", "sets": 4, "reps": "15 mittel", "rest": 0 },
-          { "ex": "latpull", "sets": 4, "reps": "12", "rest": 0 },
-          { "ex": "chestpress", "sets": 4, "reps": "12", "rest": 0 },
-          { "ex": "legcurl", "sets": 4, "reps": "12", "rest": 0 },
-          { "ex": "row", "sets": 4, "reps": "500 m zügig", "rest": 120 } ] },
-        { "title": "Rumpf", "items": [
-          { "ex": "cablecrunch", "sets": 3, "reps": "12", "rest": 45 },
-          { "ex": "pallof", "sets": 3, "reps": "10 je Seite", "rest": 45 } ] }
-      ],
-      "note": "Zeit pro Runde notieren, so siehst du den Fortschritt." },
-    "hx1": { "name": "Hyrox Einstieg", "tag": "Hyrox", "type": "hyrox", "dur": 60,
-      "goal": "Die Stationen technisch kennenlernen, noch ohne Vollgas.",
-      "blocks": [
-        { "title": "Aufwärmen", "items": [ { "ex": "row", "sets": 1, "reps": "5 Min" } ] },
-        { "title": "Kraft", "items": [
-          { "ex": "legpress", "sets": 3, "reps": "8", "rest": 90 },
-          { "ex": "latpull", "sets": 3, "reps": "8", "rest": 90 } ] },
-        { "title": "Stationen · 3 Runden ruhig", "items": [
-          { "ex": "skierg", "sets": 3, "reps": "250 m", "rest": 0 },
-          { "ex": "wallball", "sets": 3, "reps": "15", "rest": 0 },
-          { "ex": "farmers", "sets": 3, "reps": "40 m", "rest": 0 },
-          { "ex": "bbj", "sets": 3, "reps": "6", "rest": 90 } ] }
-      ] },
-    "hx2": { "name": "Kraft plus Stationen", "tag": "Hyrox", "type": "hyrox", "dur": 60,
-      "goal": "Kraft halten trotz Fussball, Stationen sauber und zügig.",
-      "blocks": [
-        { "title": "Aufwärmen", "items": [ { "ex": "skierg", "sets": 1, "reps": "4 Min" }, { "ex": "abductor", "sets": 1, "reps": "20" } ] },
-        { "title": "Kraft", "items": [
-          { "ex": "backsquat", "sets": 3, "reps": "5", "rest": 120, "cue": "RPE 7 bis 8" },
-          { "ex": "latpull", "sets": 3, "reps": "6 bis 8", "rest": 90 },
-          { "ex": "chestpress", "sets": 3, "reps": "6 bis 8", "rest": 90 } ] },
-        { "title": "Stationen · 3 Runden", "items": [
-          { "ex": "sledpush", "sets": 3, "reps": "30 s", "rest": 0 },
-          { "ex": "sledpull", "sets": 3, "reps": "20 m", "rest": 0 },
-          { "ex": "sblunge", "sets": 3, "reps": "20 Schritte", "rest": 0 },
-          { "ex": "wallball", "sets": 3, "reps": "20", "rest": 120 } ] }
-      ],
-      "note": "Nach drei Fussballtrainings müde? Kraftteil auf 2 Sätze kürzen." },
-    "hx3": { "name": "Compromised Running", "tag": "Hyrox", "type": "hyrox", "dur": 60,
-      "goal": "Laufen mit schweren Beinen, so wie im Rennen.",
-      "blocks": [
-        { "title": "Aufwärmen", "items": [ { "ex": "treadmill", "sets": 1, "reps": "6 Min locker" } ] },
-        { "title": "4 Runden", "items": [
-          { "ex": "treadmill", "sets": 4, "reps": "800 m Hyrox Tempo", "rest": 0 },
-          { "ex": "skierg", "sets": 4, "reps": "500 m", "rest": 0 },
-          { "ex": "sledpush", "sets": 4, "reps": "30 s", "rest": 0 },
-          { "ex": "wallball", "sets": 4, "reps": "25", "rest": 90 } ] },
-        { "title": "Abschluss", "items": [ { "ex": "foamroll", "sets": 1, "reps": "je Seite 60 s" } ] }
-      ],
-      "note": "Laufanteil richtet sich nach deiner Knie Stufe. Alternative: 2 km Bike statt 800 m Lauf." },
-    "simu": { "name": "Doubles Simulation", "tag": "Hyrox", "type": "hyrox", "dur": 75,
-      "goal": "Woche A Simulation mit Partner, Woche B Rolle 60 Min plus 4 × 1 km.",
-      "blocks": [
-        { "title": "Woche A · mit Partner", "items": [
-          { "ex": "treadmill", "sets": 6, "reps": "1 km + Station", "rest": 0, "cue": "Stationen aufteilen, Wechsel üben" } ] },
-        { "title": "Woche B · Koppel", "items": [
-          { "ex": "bike", "sets": 1, "reps": "60 Min Zone 2" },
-          { "ex": "treadmill", "sets": 4, "reps": "1 km Hyrox Tempo", "rest": 120 } ] }
-      ] },
-    "taper": { "name": "Taper kurz", "tag": "Hyrox", "type": "hyrox", "dur": 45,
-      "goal": "Frisch bleiben, Intensität halten.",
-      "blocks": [ { "title": "Ablauf", "items": [
-        { "ex": "backsquat", "sets": 2, "reps": "3 leicht und schnell", "rest": 90 },
-        { "ex": "wallball", "sets": 3, "reps": "15", "rest": 60 },
-        { "ex": "skierg", "sets": 3, "reps": "250 m zügig", "rest": 60 },
-        { "ex": "treadmill", "sets": 2, "reps": "400 m Renntempo", "rest": 90 } ] } ] },
-    "gS": { "name": "Kraft erhalten", "tag": "Gym", "type": "gym", "dur": 50,
-      "goal": "Zwei Tage nach dem Spiel: Kraft halten, nicht zerstören.",
-      "blocks": [ { "title": "Kraft", "items": [
-        { "ex": "legpress", "sets": 3, "reps": "6", "rest": 120 },
-        { "ex": "hipthrust", "sets": 3, "reps": "8", "rest": 90 },
-        { "ex": "legcurl", "sets": 3, "reps": "8", "rest": 75, "cue": "Schutz gegen Zerrungen" },
-        { "ex": "latpull", "sets": 3, "reps": "8", "rest": 75 },
-        { "ex": "abductor", "sets": 2, "reps": "15", "rest": 45 } ] } ] },
-    "rolleZ2": { "name": "Grundlage Zone 2", "tag": "Rolle", "type": "endurance", "dur": 60,
-      "goal": "Aerobe Basis und Fettstoffwechsel, schont das Knie.",
-      "blocks": [ { "title": "Ablauf", "items": [
-        { "ex": "bike", "sets": 1, "reps": "10 Min einrollen" },
-        { "ex": "bike", "sets": 1, "reps": "45 Min Zone 2, Kadenz 85 bis 95" },
-        { "ex": "bike", "sets": 1, "reps": "5 Min ausrollen" } ] } ],
-      "note": "Wirklich locker. Du sollst danach frischer sein als vorher." },
-    "rolleInt": { "name": "Intervalle 5 × 4", "tag": "Rolle", "type": "endurance", "dur": 60,
-      "goal": "VO2max und Tempohärte für Fussball und Hyrox.",
-      "blocks": [ { "title": "Ablauf", "items": [
-        { "ex": "bike", "sets": 1, "reps": "15 Min einrollen mit 3 × 20 s Antritten" },
-        { "ex": "bike", "sets": 5, "reps": "4 Min Zone 4 bis 5", "rest": 180 },
-        { "ex": "bike", "sets": 1, "reps": "10 Min ausrollen" } ] } ] },
-    "rolleLocker": { "name": "Rolle locker", "tag": "Rolle", "type": "endurance", "dur": 45,
-      "goal": "Durchbewegen, Beine frisch.",
-      "blocks": [ { "title": "Ablauf", "items": [ { "ex": "bike", "sets": 1, "reps": "45 Min Zone 1 bis 2, 3 × 30 s zügig" } ] } ] },
-    "ausdLang": { "name": "Lange Ausdauer", "tag": "Rolle + Lauf", "type": "endurance", "dur": 90,
-      "goal": "Grosse aerobe Basis für Fussball und 8 km Hyrox Laufen.",
-      "blocks": [ { "title": "Ablauf", "items": [
-        { "ex": "bike", "sets": 1, "reps": "60 bis 75 Min Zone 2" },
-        { "ex": "treadmill", "sets": 1, "reps": "15 bis 20 Min gemäss Knie Stufe" } ] } ],
-      "note": "Bei schönem Wetter gerne draussen mit dem Rennrad." },
-    "laufRW": { "name": "Lauf nach Knie Stufe", "tag": "Lauf", "type": "endurance", "dur": 45, "knee": true,
-      "goal": "Laufen schrittweise zurückholen. Schmerz bleibt unter 3 von 10.",
-      "blocks": [ { "title": "Ablauf", "items": [
-        { "ex": "crosstrainer", "sets": 1, "reps": "5 Min einlaufen" },
-        { "ex": "treadmill", "sets": 1, "reps": "Gemäss Knie Stufe" },
-        { "ex": "skierg", "sets": 1, "reps": "10 Min locker, falls Lauf kurz" } ] } ],
-      "note": "Nächste Stufe erst nach zwei Läufen mit maximal 2 von 10 und ohne Schmerz am Morgen danach." },
-    "knie": { "name": "Knie Routine", "tag": "Mobility", "type": "rest", "dur": 15,
-      "goal": "Hüfte kräftigen, Knie entlasten. Geht auch zuhause.",
-      "blocks": [ { "title": "Routine", "items": [
-        { "ex": "foamroll", "sets": 1, "reps": "je Seite 90 s" },
-        { "ex": "clamshell", "sets": 2, "reps": "15 je Seite", "rest": 20 },
-        { "ex": "lateralwalk", "sets": 2, "reps": "15 Schritte je Richtung", "rest": 20 },
-        { "ex": "sideplank", "sets": 2, "reps": "10 Beinheben je Seite", "rest": 20 },
-        { "ex": "singlebridge", "sets": 2, "reps": "10 je Seite", "rest": 20 },
-        { "ex": "stepdown", "sets": 2, "reps": "8 je Seite, 3 s runter", "rest": 30 },
-        { "ex": "hipflexor", "sets": 1, "reps": "je Seite 45 s" } ] } ] },
-    "fb": { "name": "Fussballtraining", "tag": "Fussball", "type": "football", "dur": 90,
-      "goal": "Teamtraining. Zählt als intensive Einheit.",
-      "blocks": [ { "title": "10 Min vorher", "items": [
-        { "ex": "lateralwalk", "sets": 1, "reps": "15 Schritte je Richtung" },
-        { "ex": "singlebridge", "sets": 1, "reps": "10 je Seite" },
-        { "ex": "sideplank", "sets": 1, "reps": "20 s je Seite" } ] } ],
-      "note": "Kein zusätzliches Lauftraining am selben Tag. Danach Protein und Kohlenhydrate." },
-    "spiel": { "name": "Spiel", "tag": "Match", "type": "football", "dur": 90,
-      "goal": "Spieltag. Am Vortag nur Aktivierung, viel trinken, früh schlafen.",
-      "blocks": [ { "title": "Vor dem Einlaufen", "items": [
-        { "ex": "lateralwalk", "sets": 1, "reps": "15 Schritte je Richtung" },
-        { "ex": "singlebridge", "sets": 1, "reps": "10 je Seite" } ] } ] },
-    "ruhe": { "name": "Ruhetag", "tag": "Erholung", "type": "rest", "dur": 0,
-      "goal": "Erholung ist Training. Spazieren ist ok, früh schlafen.", "blocks": [] },
-    "race": { "name": "HYROX PARIS", "tag": "Renntag", "type": "accent", "dur": 0,
-      "goal": "Erste 2 km bewusst ruhig. Viel Erfolg!",
-      "blocks": [ { "title": "Checkliste", "items": [
-        { "ex": null, "sets": 1, "reps": "Frühstück 3 Stunden vorher, bekannt und leicht" },
-        { "ex": null, "sets": 1, "reps": "10 Min einlaufen, 2 Steigerungen" } ] } ] }
+  "matchDay": 5
+ },
+ "phases": [
+  {
+   "id": "basis",
+   "name": "Basis",
+   "from": "2026-11-23",
+   "to": "2026-12-20",
+   "color": "gym",
+   "goal": "Grundkraft an Geräten, Hüfte stark fürs Knie, aerobe Basis auf der Rolle.",
+   "days": [
+    [
+     "gA"
+    ],
+    [
+     "rolleZ2"
+    ],
+    [
+     "gB"
+    ],
+    [
+     "knie"
+    ],
+    [
+     "laufRW"
+    ],
+    [
+     "gC"
+    ],
+    [
+     "ruhe"
+    ]
+   ]
   },
-  "exercises": {
-    "legpress": { "name": "Beinpresse", "cat": "Beine", "equip": "Gerät", "how": ["Füsse hüftbreit in der Mitte der Platte", "Knie zeigen in Richtung Zehen", "Tief bis ca. 90 Grad im Knie, Gesäss bleibt am Polster", "Nicht ganz durchstrecken"], "err": "Becken rollt unten ab, Knie fallen nach innen", "alt": "Hackenschmidt Maschine" },
-    "hipthrust": { "name": "Hip Thrust", "cat": "Beine", "equip": "Gerät oder Langhantel", "how": ["Oberer Rücken an der Bank, Füsse flach", "Hüfte hochdrücken bis Körper gerade", "Oben Gesäss 1 s anspannen, Kinn zur Brust"], "err": "Hohlkreuz statt Hüftstreckung", "alt": "Glute Bridge am Boden" },
-    "legcurl": { "name": "Beinbeuger sitzend", "cat": "Beine", "equip": "Gerät", "how": ["Knie auf Höhe der Drehachse", "Fersen kontrolliert nach unten ziehen", "Langsam zurück, 2 s"], "err": "Schwung, Hüfte hebt ab", "alt": "Beinbeuger liegend" },
-    "abductor": { "name": "Hüftabduktor", "cat": "Knie", "equip": "Gerät", "how": ["Aufrecht sitzen, leicht nach vorne lehnen", "Beine kontrolliert nach aussen drücken", "Langsam zurück, Gewicht nicht absetzen"], "err": "Zu schwer, Schwung", "alt": "Monster Walk mit Band" },
-    "legext": { "name": "Beinstrecker", "cat": "Beine", "equip": "Gerät", "how": ["Knie auf Höhe der Drehachse", "Beine strecken, oben 1 s halten", "Nur im schmerzfreien Bereich arbeiten"], "err": "Zu schwer, Ruck am Anfang", "alt": "Weglassen bei Knieschmerz" },
-    "calfmachine": { "name": "Wadenmaschine", "cat": "Beine", "equip": "Gerät", "how": ["Fussballen auf der Kante", "Ganz hoch, langsam tief in die Dehnung"], "err": "Wippen mit kleinem Bewegungsumfang", "alt": "Einbeinig an der Treppe" },
-    "chestpress": { "name": "Brustpresse", "cat": "Oberkörper", "equip": "Gerät", "how": ["Griffe auf Brusthöhe", "Schulterblätter zusammen und unten lassen", "Kraftvoll drücken, langsam zurück"], "err": "Schultern kommen nach vorne", "alt": "Kurzhantel Bankdrücken" },
-    "latpull": { "name": "Latzug", "cat": "Oberkörper", "equip": "Kabel", "how": ["Griff etwas breiter als schulterbreit", "Brust raus, Stange zur oberen Brust ziehen", "Ellbogen nach unten führen, kontrolliert hoch"], "err": "Weit nach hinten lehnen, Schwung", "alt": "Klimmzug mit Band" },
-    "cablerow": { "name": "Rudern am Kabel", "cat": "Oberkörper", "equip": "Kabel", "how": ["Aufrecht sitzen, Knie leicht gebeugt", "Griff zum Bauchnabel ziehen", "Schulterblätter zusammen, langsam nach vorne"], "err": "Oberkörper schaukelt", "alt": "Rudermaschine mit Brustpolster" },
-    "shoulderpress": { "name": "Schulterpresse", "cat": "Oberkörper", "equip": "Gerät", "how": ["Griffe auf Schulterhöhe", "Nach oben drücken ohne Hohlkreuz", "Kontrolliert zurück"], "err": "Hohlkreuz", "alt": "Kurzhantel sitzend" },
-    "facepull": { "name": "Face Pull", "cat": "Oberkörper", "equip": "Kabel", "how": ["Seil auf Kopfhöhe", "Zum Gesicht ziehen, Ellbogen hoch und aussen", "Hände am Ende neben den Ohren"], "err": "Zu schwer, Ellbogen tief", "alt": "Band Pull Apart" },
-    "backext": { "name": "Rückenstrecker", "cat": "Rumpf", "equip": "Gerät", "how": ["Hüfte am Polster", "Aus der Hüfte runter und hoch bis Körper gerade", "Nicht überstrecken"], "err": "Hohlkreuz oben", "alt": "Rückenstrecker Maschine sitzend" },
-    "cablecrunch": { "name": "Kabel Crunch", "cat": "Rumpf", "equip": "Kabel", "how": ["Kniend, Seil neben dem Kopf", "Rippen Richtung Becken einrollen", "Hüfte bleibt ruhig"], "err": "Aus der Hüfte ziehen", "alt": "Crunch Maschine" },
-    "pallof": { "name": "Pallof Press", "cat": "Rumpf", "equip": "Kabel", "how": ["Seitlich zum Kabel, Griff vor der Brust", "Arme nach vorne strecken, nicht verdrehen", "2 s halten"], "err": "Rumpf dreht mit", "alt": "Mit Band" },
-    "sideplank": { "name": "Seitstütz", "cat": "Knie", "equip": "Matte", "how": ["Unterarm unter der Schulter", "Körper in einer Linie, Hüfte hoch", "Fortgeschritten: oberes Bein heben"], "err": "Hüfte hängt durch", "alt": "Auf den Knien" },
-    "clamshell": { "name": "Clamshell", "cat": "Knie", "equip": "Band", "how": ["Seitlage, Knie 90 Grad, Band über den Knien", "Fersen zusammen, oberes Knie öffnen", "Becken bleibt stabil"], "err": "Becken dreht mit", "alt": "Ohne Band" },
-    "lateralwalk": { "name": "Monster Walk", "cat": "Knie", "equip": "Band", "how": ["Miniband über den Knien", "Leicht in die Knie", "Seitliche Schritte, Spannung halten"], "err": "Oberkörper schaukelt", "alt": "Hüftabduktor Gerät" },
-    "singlebridge": { "name": "Einbeinige Brücke", "cat": "Knie", "equip": "Matte", "how": ["Rückenlage, ein Fuss am Boden", "Hüfte über die Ferse hochdrücken", "Becken bleibt waagrecht"], "err": "Becken kippt", "alt": "Beidbeinig" },
-    "stepdown": { "name": "Step Down", "cat": "Knie", "equip": "Stufe", "how": ["Auf 15 bis 20 cm Stufe stehen", "Freies Bein in 3 s zum Boden senken", "Knie bleibt über der 2. Zehe"], "err": "Knie fällt nach innen", "alt": "Tiefere Stufe" },
-    "foamroll": { "name": "Faszienrolle Oberschenkel aussen", "cat": "Mobility", "equip": "Rolle", "how": ["Hüftseite und äusserer Oberschenkel", "Langsam rollen, 60 bis 90 s", "Nicht direkt aufs Knie"], "err": "Zu schnell und zu hart", "alt": "Ball an der Hüftseite" },
-    "hipflexor": { "name": "Hüftbeuger Dehnung", "cat": "Mobility", "equip": "Matte", "how": ["Kniestand, ein Fuss vorne", "Gesäss anspannen, Hüfte nach vorne", "Je 45 s"], "err": "Hohlkreuz", "alt": "Couch Stretch" },
-    "backsquat": { "name": "Kniebeuge", "cat": "Beine", "equip": "Langhantel", "how": ["Hantel auf dem oberen Rücken", "Knie über die Zehen, Rücken neutral", "Mindestens parallel, über ganzen Fuss hoch"], "err": "Knie fallen nach innen", "alt": "Beinpresse" },
-    "crosstrainer": { "name": "Crosstrainer", "cat": "Ausdauer", "equip": "Gerät", "how": ["Aufrecht, Arme aktiv", "Locker, sprechen möglich"], "err": "Auf den Griffen abstützen", "alt": "Rudern" },
-    "row": { "name": "Rudergerät", "cat": "Ausdauer", "equip": "Ergometer", "how": ["Beine, Rücken, Arme", "Zurück: Arme, Rücken, Beine", "Damper 5 bis 6, Frequenz 26 bis 30"], "err": "Zu früh mit den Armen", "alt": "SkiErg" },
-    "skierg": { "name": "SkiErg", "cat": "Ausdauer", "equip": "Ergometer", "how": ["Arme hoch, Zug aus Lat und Rumpf", "Hüfte beugt mit, Knie wenig", "Hände bis zur Hüfte"], "err": "Nur aus den Armen", "alt": "Kabel Pullover" },
-    "bike": { "name": "Rolle oder Rennrad", "cat": "Ausdauer", "equip": "Rollentrainer", "how": ["Kadenz 85 bis 95", "Zone 2: sprechen in ganzen Sätzen", "Ventilator und Flasche bereit"], "err": "Zone 2 zu schnell fahren", "alt": "Spinning Bike" },
-    "treadmill": { "name": "Laufen", "cat": "Ausdauer", "equip": "Laufband oder draussen", "how": ["Kurze schnelle Schritte, Kadenz plus 5 Prozent", "Laufband 1 Prozent Steigung", "Flach, kein langes Bergab"], "err": "Zu lange Schritte, Ferse knallt auf", "alt": "Crosstrainer" },
-    "wallball": { "name": "Wall Balls", "cat": "Hyrox", "equip": "Ball 6 kg", "how": ["Tiefe Kniebeuge, Ball vor der Brust", "Explosiv hoch, Ball ans 3 m Ziel", "Fangen und direkt in die nächste Beuge"], "err": "Nicht tief genug", "alt": "Thruster mit Kurzhanteln" },
-    "farmers": { "name": "Farmers Carry", "cat": "Hyrox", "equip": "2 × 24 kg", "how": ["Aufrecht, Schultern weg von den Ohren", "Kurze schnelle Schritte", "Ruhig atmen"], "err": "Nach vorne lehnen", "alt": "Kurzhanteln" },
-    "bbj": { "name": "Burpee Broad Jumps", "cat": "Hyrox", "equip": "Boden", "how": ["Brust zum Boden", "Hoch und beidbeinig weit springen", "Weich landen, direkt weiter"], "err": "Hände vor die Füsse setzen", "alt": "Burpee mit kurzem Sprung" },
-    "sblunge": { "name": "Sandbag Lunges", "cat": "Hyrox", "equip": "Sandsack 20 kg", "how": ["Sandsack auf den Schultern", "Hinteres Knie berührt kurz den Boden", "Gleichmässiger Rhythmus"], "err": "Knie knallt auf", "alt": "Reverse Lunges bei Knieschmerz" },
-    "sledpush": { "name": "Sled Push Ersatz", "cat": "Hyrox", "equip": "Laufband aus", "how": ["Ausgeschaltetes Laufband 30 s schieben", "Oder schwere Beinpresse 12 Wdh", "Körper flach, kurze kräftige Schritte"], "err": "Aufrecht schieben", "alt": "Vor dem Rennen einmal am echten Sled üben" },
-    "sledpull": { "name": "Sled Pull Ersatz", "cat": "Hyrox", "equip": "Seil", "how": ["Seil an Hantelscheibe auf Matte", "Hand über Hand ziehen, tief sitzen", "Beine arbeiten mit"], "err": "Nur aus den Armen", "alt": "Kabelzug rückwärts gehen" }
+  {
+   "id": "festtage",
+   "name": "Festtage",
+   "from": "2026-12-21",
+   "to": "2027-01-03",
+   "color": "rest",
+   "goal": "Lockere Wochen. 3 bis 4 Einheiten reichen, Tage frei schieben.",
+   "days": [
+    [
+     "gA"
+    ],
+    [
+     "rolleZ2"
+    ],
+    [
+     "ruhe"
+    ],
+    [
+     "gB"
+    ],
+    [
+     "ruhe"
+    ],
+    [
+     "laufRW"
+    ],
+    [
+     "ruhe"
+    ]
+   ]
+  },
+  {
+   "id": "vorbereitung",
+   "name": "Vorbereitung",
+   "from": "2027-01-04",
+   "to": "2027-01-17",
+   "color": "endurance",
+   "goal": "Intensität rauf und erste Hyrox Stationen, damit der Fussballstart leicht fällt.",
+   "days": [
+    [
+     "gA"
+    ],
+    [
+     "rolleInt"
+    ],
+    [
+     "gB"
+    ],
+    [
+     "knie"
+    ],
+    [
+     "laufRW"
+    ],
+    [
+     "hx1"
+    ],
+    [
+     "ruhe"
+    ]
+   ]
+  },
+  {
+   "id": "aufbau",
+   "name": "Fussball Vorbereitung + Hyrox Aufbau",
+   "from": "2027-01-18",
+   "to": "2027-02-28",
+   "color": "football",
+   "goal": "Fussball 3 mal pro Woche. Samstag Kraft und Stationen, Sonntag lange Ausdauer.",
+   "deload": [
+    "2027-02-15"
+   ],
+   "days": [
+    [
+     "fb"
+    ],
+    [
+     "fb"
+    ],
+    [
+     "knie"
+    ],
+    [
+     "fb"
+    ],
+    [
+     "ruhe"
+    ],
+    [
+     "hx2"
+    ],
+    [
+     "ausdLang"
+    ]
+   ]
+  },
+  {
+   "id": "spezifisch",
+   "name": "Hyrox spezifisch",
+   "from": "2027-03-01",
+   "to": "2027-03-28",
+   "color": "hyrox",
+   "goal": "Laufen unter Vorbelastung und Simulationen mit dem Partner.",
+   "deload": [
+    "2027-03-22"
+   ],
+   "days": [
+    [
+     "fb"
+    ],
+    [
+     "fb"
+    ],
+    [
+     "knie"
+    ],
+    [
+     "fb"
+    ],
+    [
+     "ruhe"
+    ],
+    [
+     "hx3"
+    ],
+    [
+     "simu"
+    ]
+   ]
+  },
+  {
+   "id": "taper",
+   "name": "Taper",
+   "from": "2027-03-29",
+   "to": "2027-04-12",
+   "color": "accent",
+   "goal": "Volumen minus 40 Prozent, Intensität halten, frisch nach Paris.",
+   "days": [
+    [
+     "fb"
+    ],
+    [
+     "fb"
+    ],
+    [
+     "knie"
+    ],
+    [
+     "fb"
+    ],
+    [
+     "ruhe"
+    ],
+    [
+     "taper"
+    ],
+    [
+     "rolleLocker"
+    ]
+   ]
+  },
+  {
+   "id": "saison",
+   "name": "Saison",
+   "from": "2027-04-13",
+   "to": "2027-06-30",
+   "color": "football",
+   "goal": "Spiele haben Vorrang. Kraft erhalten, Erholung sichern.",
+   "days": [
+    [
+     "gS"
+    ],
+    [
+     "fb"
+    ],
+    [
+     "rolleLocker"
+    ],
+    [
+     "fb"
+    ],
+    [
+     "knie"
+    ],
+    [
+     "spiel"
+    ],
+    [
+     "ruhe"
+    ]
+   ]
   }
+ ],
+ "kneeStages": [
+  {
+   "name": "Gehen und Rad",
+   "text": "Kein Laufen. Rolle, Rudern, SkiErg. Knie Routine täglich."
+  },
+  {
+   "name": "Run Walk kurz",
+   "text": "6 × (3 Min laufen, 1 Min gehen)"
+  },
+  {
+   "name": "Run Walk mittel",
+   "text": "5 × (5 Min laufen, 1 Min gehen)"
+  },
+  {
+   "name": "Run Walk lang",
+   "text": "3 × (10 Min laufen, 1 Min gehen)"
+  },
+  {
+   "name": "Durchlaufen",
+   "text": "30 Min Zone 2 am Stück"
+  },
+  {
+   "name": "Volumen",
+   "text": "40 bis 45 Min Zone 2 plus 4 × 20 s Steigerungen"
+  },
+  {
+   "name": "Tempo",
+   "text": "5 bis 6 × 1 km im Hyrox Tempo, 90 s Pause"
+  }
+ ],
+ "sessions": {
+  "gA": {
+   "name": "Beine und Hüfte",
+   "tag": "Gym A",
+   "type": "gym",
+   "dur": 60,
+   "goal": "Beinkraft an Geräten. Hüfte und einbeinige Kraft schützen dein Knie.",
+   "blocks": [
+    {
+     "title": "Aufwärmen",
+     "items": [
+      {
+       "ex": "crosstrainer",
+       "sets": 1,
+       "reps": "8 Min locker"
+      },
+      {
+       "ex": "lateralwalk",
+       "sets": 1,
+       "reps": "15 Schritte je Richtung"
+      }
+     ]
+    },
+    {
+     "title": "Kraft",
+     "items": [
+      {
+       "ex": "squatmachine",
+       "sets": 4,
+       "reps": "8 bis 10",
+       "rest": 120,
+       "cue": "RPE 7, 2 Wdh in Reserve"
+      },
+      {
+       "ex": "legpress1",
+       "sets": 3,
+       "reps": "10 je Seite",
+       "rest": 75,
+       "cue": "Linkes Knie genau beobachten"
+      },
+      {
+       "ex": "hipthrust",
+       "sets": 3,
+       "reps": "10",
+       "rest": 90
+      },
+      {
+       "ex": "legcurl",
+       "sets": 3,
+       "reps": "10 bis 12",
+       "rest": 75
+      },
+      {
+       "ex": "cableabd",
+       "sets": 3,
+       "reps": "12 je Seite",
+       "rest": 45
+      },
+      {
+       "ex": "calfmachine",
+       "sets": 3,
+       "reps": "15",
+       "rest": 60
+      }
+     ]
+    },
+    {
+     "title": "Rumpf",
+     "items": [
+      {
+       "ex": "sideplank",
+       "sets": 3,
+       "reps": "30 s je Seite",
+       "rest": 30
+      }
+     ]
+    }
+   ],
+   "note": "Steigere das Gewicht erst, wenn alle Sätze sauber gehen."
+  },
+  "gB": {
+   "name": "Oberkörper und Rücken",
+   "tag": "Gym B",
+   "type": "gym",
+   "dur": 60,
+   "goal": "Zugkraft und Haltung, gute Basis für Rudern und SkiErg.",
+   "blocks": [
+    {
+     "title": "Aufwärmen",
+     "items": [
+      {
+       "ex": "row",
+       "sets": 1,
+       "reps": "6 Min locker"
+      },
+      {
+       "ex": "facepull",
+       "sets": 1,
+       "reps": "15 leicht"
+      }
+     ]
+    },
+    {
+     "title": "Kraft",
+     "items": [
+      {
+       "ex": "chestpress",
+       "sets": 4,
+       "reps": "8 bis 10",
+       "rest": 90
+      },
+      {
+       "ex": "latpull",
+       "sets": 4,
+       "reps": "8 bis 10",
+       "rest": 90
+      },
+      {
+       "ex": "cablerow",
+       "sets": 3,
+       "reps": "10",
+       "rest": 75
+      },
+      {
+       "ex": "shoulderpress",
+       "sets": 3,
+       "reps": "10",
+       "rest": 75
+      },
+      {
+       "ex": "facepull",
+       "sets": 3,
+       "reps": "15",
+       "rest": 45
+      },
+      {
+       "ex": "backext",
+       "sets": 3,
+       "reps": "12",
+       "rest": 60
+      }
+     ]
+    },
+    {
+     "title": "Finisher",
+     "items": [
+      {
+       "ex": "skierg",
+       "sets": 6,
+       "reps": "1 Min zügig",
+       "rest": 60
+      }
+     ]
+    }
+   ]
+  },
+  "gC": {
+   "name": "Ganzkörper Zirkel",
+   "tag": "Gym C",
+   "type": "gym",
+   "dur": 60,
+   "goal": "Kraftausdauer und Kalorien, alles an Geräten.",
+   "blocks": [
+    {
+     "title": "Aufwärmen",
+     "items": [
+      {
+       "ex": "row",
+       "sets": 1,
+       "reps": "6 Min locker"
+      }
+     ]
+    },
+    {
+     "title": "Zirkel · 4 Runden, 2 Min Pause",
+     "items": [
+      {
+       "ex": "legpress",
+       "sets": 4,
+       "reps": "15 mittel",
+       "rest": 0
+      },
+      {
+       "ex": "latpull",
+       "sets": 4,
+       "reps": "12",
+       "rest": 0
+      },
+      {
+       "ex": "chestpress",
+       "sets": 4,
+       "reps": "12",
+       "rest": 0
+      },
+      {
+       "ex": "legext",
+       "sets": 4,
+       "reps": "12, nur schmerzfreier Bereich",
+       "rest": 0
+      },
+      {
+       "ex": "row",
+       "sets": 4,
+       "reps": "500 m zügig",
+       "rest": 120
+      }
+     ]
+    },
+    {
+     "title": "Rumpf",
+     "items": [
+      {
+       "ex": "cablecrunch",
+       "sets": 3,
+       "reps": "12",
+       "rest": 45
+      },
+      {
+       "ex": "pallof",
+       "sets": 3,
+       "reps": "10 je Seite",
+       "rest": 45
+      }
+     ]
+    }
+   ],
+   "note": "Zeit pro Runde notieren, so siehst du den Fortschritt."
+  },
+  "hx1": {
+   "name": "Hyrox Einstieg",
+   "tag": "Hyrox",
+   "type": "hyrox",
+   "dur": 60,
+   "goal": "Die Stationen technisch kennenlernen, noch ohne Vollgas.",
+   "blocks": [
+    {
+     "title": "Aufwärmen",
+     "items": [
+      {
+       "ex": "row",
+       "sets": 1,
+       "reps": "5 Min"
+      }
+     ]
+    },
+    {
+     "title": "Kraft",
+     "items": [
+      {
+       "ex": "legpress",
+       "sets": 3,
+       "reps": "8",
+       "rest": 90
+      },
+      {
+       "ex": "latpull",
+       "sets": 3,
+       "reps": "8",
+       "rest": 90
+      }
+     ]
+    },
+    {
+     "title": "Stationen · 3 Runden ruhig",
+     "items": [
+      {
+       "ex": "skierg",
+       "sets": 3,
+       "reps": "250 m",
+       "rest": 0
+      },
+      {
+       "ex": "wallball",
+       "sets": 3,
+       "reps": "15",
+       "rest": 0
+      },
+      {
+       "ex": "farmers",
+       "sets": 3,
+       "reps": "40 m",
+       "rest": 0
+      },
+      {
+       "ex": "bbj",
+       "sets": 3,
+       "reps": "6",
+       "rest": 90
+      }
+     ]
+    }
+   ]
+  },
+  "hx2": {
+   "name": "Kraft plus Stationen",
+   "tag": "Hyrox",
+   "type": "hyrox",
+   "dur": 60,
+   "goal": "Kraft halten trotz Fussball, Stationen sauber und zügig.",
+   "blocks": [
+    {
+     "title": "Aufwärmen",
+     "items": [
+      {
+       "ex": "skierg",
+       "sets": 1,
+       "reps": "4 Min"
+      },
+      {
+       "ex": "cableabd",
+       "sets": 1,
+       "reps": "20"
+      }
+     ]
+    },
+    {
+     "title": "Kraft",
+     "items": [
+      {
+       "ex": "squatmachine",
+       "sets": 3,
+       "reps": "5",
+       "rest": 120,
+       "cue": "RPE 7 bis 8"
+      },
+      {
+       "ex": "latpull",
+       "sets": 3,
+       "reps": "6 bis 8",
+       "rest": 90
+      },
+      {
+       "ex": "chestpress",
+       "sets": 3,
+       "reps": "6 bis 8",
+       "rest": 90
+      }
+     ]
+    },
+    {
+     "title": "Stationen · 3 Runden",
+     "items": [
+      {
+       "ex": "sledpush",
+       "sets": 3,
+       "reps": "30 s",
+       "rest": 0
+      },
+      {
+       "ex": "sledpull",
+       "sets": 3,
+       "reps": "20 m",
+       "rest": 0
+      },
+      {
+       "ex": "sblunge",
+       "sets": 3,
+       "reps": "20 Schritte",
+       "rest": 0
+      },
+      {
+       "ex": "wallball",
+       "sets": 3,
+       "reps": "20",
+       "rest": 120
+      }
+     ]
+    }
+   ],
+   "note": "Nach drei Fussballtrainings müde? Kraftteil auf 2 Sätze kürzen."
+  },
+  "hx3": {
+   "name": "Compromised Running",
+   "tag": "Hyrox",
+   "type": "hyrox",
+   "dur": 60,
+   "goal": "Laufen mit schweren Beinen, so wie im Rennen.",
+   "blocks": [
+    {
+     "title": "Aufwärmen",
+     "items": [
+      {
+       "ex": "treadmill",
+       "sets": 1,
+       "reps": "6 Min locker"
+      }
+     ]
+    },
+    {
+     "title": "4 Runden",
+     "items": [
+      {
+       "ex": "treadmill",
+       "sets": 4,
+       "reps": "800 m Hyrox Tempo",
+       "rest": 0
+      },
+      {
+       "ex": "skierg",
+       "sets": 4,
+       "reps": "500 m",
+       "rest": 0
+      },
+      {
+       "ex": "sledpush",
+       "sets": 4,
+       "reps": "30 s",
+       "rest": 0
+      },
+      {
+       "ex": "wallball",
+       "sets": 4,
+       "reps": "25",
+       "rest": 90
+      }
+     ]
+    },
+    {
+     "title": "Abschluss",
+     "items": [
+      {
+       "ex": "foamroll",
+       "sets": 1,
+       "reps": "je Seite 60 s"
+      }
+     ]
+    }
+   ],
+   "note": "Laufanteil richtet sich nach deiner Knie Stufe. Alternative: 2 km Bike statt 800 m Lauf."
+  },
+  "simu": {
+   "name": "Doubles Simulation",
+   "tag": "Hyrox",
+   "type": "hyrox",
+   "dur": 75,
+   "goal": "Woche A Simulation mit Partner, Woche B Rolle 60 Min plus 4 × 1 km.",
+   "blocks": [
+    {
+     "title": "Woche A · mit Partner",
+     "items": [
+      {
+       "ex": "treadmill",
+       "sets": 6,
+       "reps": "1 km + Station",
+       "rest": 0,
+       "cue": "Stationen aufteilen, Wechsel üben"
+      }
+     ]
+    },
+    {
+     "title": "Woche B · Koppel",
+     "items": [
+      {
+       "ex": "bike",
+       "sets": 1,
+       "reps": "60 Min Zone 2"
+      },
+      {
+       "ex": "treadmill",
+       "sets": 4,
+       "reps": "1 km Hyrox Tempo",
+       "rest": 120
+      }
+     ]
+    }
+   ]
+  },
+  "taper": {
+   "name": "Taper kurz",
+   "tag": "Hyrox",
+   "type": "hyrox",
+   "dur": 45,
+   "goal": "Frisch bleiben, Intensität halten.",
+   "blocks": [
+    {
+     "title": "Ablauf",
+     "items": [
+      {
+       "ex": "squatmachine",
+       "sets": 2,
+       "reps": "3 leicht und schnell",
+       "rest": 90
+      },
+      {
+       "ex": "wallball",
+       "sets": 3,
+       "reps": "15",
+       "rest": 60
+      },
+      {
+       "ex": "skierg",
+       "sets": 3,
+       "reps": "250 m zügig",
+       "rest": 60
+      },
+      {
+       "ex": "treadmill",
+       "sets": 2,
+       "reps": "400 m Renntempo",
+       "rest": 90
+      }
+     ]
+    }
+   ]
+  },
+  "gS": {
+   "name": "Kraft erhalten",
+   "tag": "Gym",
+   "type": "gym",
+   "dur": 50,
+   "goal": "Zwei Tage nach dem Spiel: Kraft halten, nicht zerstören.",
+   "blocks": [
+    {
+     "title": "Kraft",
+     "items": [
+      {
+       "ex": "squatmachine",
+       "sets": 3,
+       "reps": "6",
+       "rest": 120
+      },
+      {
+       "ex": "hipthrust",
+       "sets": 3,
+       "reps": "8",
+       "rest": 90
+      },
+      {
+       "ex": "legcurl",
+       "sets": 3,
+       "reps": "8",
+       "rest": 75,
+       "cue": "Schutz gegen Zerrungen"
+      },
+      {
+       "ex": "latpull",
+       "sets": 3,
+       "reps": "8",
+       "rest": 75
+      },
+      {
+       "ex": "cableabd",
+       "sets": 2,
+       "reps": "15",
+       "rest": 45
+      }
+     ]
+    }
+   ]
+  },
+  "rolleZ2": {
+   "name": "Grundlage Zone 2",
+   "tag": "Rolle",
+   "type": "endurance",
+   "dur": 60,
+   "goal": "Aerobe Basis und Fettstoffwechsel, schont das Knie.",
+   "blocks": [
+    {
+     "title": "Ablauf",
+     "items": [
+      {
+       "ex": "bike",
+       "sets": 1,
+       "reps": "10 Min einrollen"
+      },
+      {
+       "ex": "bike",
+       "sets": 1,
+       "reps": "45 Min Zone 2, Kadenz 85 bis 95"
+      },
+      {
+       "ex": "bike",
+       "sets": 1,
+       "reps": "5 Min ausrollen"
+      }
+     ]
+    }
+   ],
+   "note": "Wirklich locker. Du sollst danach frischer sein als vorher."
+  },
+  "rolleInt": {
+   "name": "Intervalle 5 × 4",
+   "tag": "Rolle",
+   "type": "endurance",
+   "dur": 60,
+   "goal": "VO2max und Tempohärte für Fussball und Hyrox.",
+   "blocks": [
+    {
+     "title": "Ablauf",
+     "items": [
+      {
+       "ex": "bike",
+       "sets": 1,
+       "reps": "15 Min einrollen mit 3 × 20 s Antritten"
+      },
+      {
+       "ex": "bike",
+       "sets": 5,
+       "reps": "4 Min Zone 4 bis 5",
+       "rest": 180
+      },
+      {
+       "ex": "bike",
+       "sets": 1,
+       "reps": "10 Min ausrollen"
+      }
+     ]
+    }
+   ]
+  },
+  "rolleLocker": {
+   "name": "Rolle locker",
+   "tag": "Rolle",
+   "type": "endurance",
+   "dur": 45,
+   "goal": "Durchbewegen, Beine frisch.",
+   "blocks": [
+    {
+     "title": "Ablauf",
+     "items": [
+      {
+       "ex": "bike",
+       "sets": 1,
+       "reps": "45 Min Zone 1 bis 2, 3 × 30 s zügig"
+      }
+     ]
+    }
+   ]
+  },
+  "ausdLang": {
+   "name": "Lange Ausdauer",
+   "tag": "Rolle + Lauf",
+   "type": "endurance",
+   "dur": 90,
+   "goal": "Grosse aerobe Basis für Fussball und 8 km Hyrox Laufen.",
+   "blocks": [
+    {
+     "title": "Ablauf",
+     "items": [
+      {
+       "ex": "bike",
+       "sets": 1,
+       "reps": "60 bis 75 Min Zone 2"
+      },
+      {
+       "ex": "treadmill",
+       "sets": 1,
+       "reps": "15 bis 20 Min gemäss Knie Stufe"
+      }
+     ]
+    }
+   ],
+   "note": "Bei schönem Wetter gerne draussen mit dem Rennrad."
+  },
+  "laufRW": {
+   "name": "Lauf nach Knie Stufe",
+   "tag": "Lauf",
+   "type": "endurance",
+   "dur": 45,
+   "knee": true,
+   "goal": "Laufen schrittweise zurückholen. Schmerz bleibt unter 3 von 10.",
+   "blocks": [
+    {
+     "title": "Ablauf",
+     "items": [
+      {
+       "ex": "crosstrainer",
+       "sets": 1,
+       "reps": "5 Min einlaufen"
+      },
+      {
+       "ex": "treadmill",
+       "sets": 1,
+       "reps": "Gemäss Knie Stufe"
+      },
+      {
+       "ex": "skierg",
+       "sets": 1,
+       "reps": "10 Min locker, falls Lauf kurz"
+      }
+     ]
+    }
+   ],
+   "note": "Nächste Stufe erst nach zwei Läufen mit maximal 2 von 10 und ohne Schmerz am Morgen danach."
+  },
+  "knie": {
+   "name": "Knie Routine",
+   "tag": "Mobility",
+   "type": "rest",
+   "dur": 15,
+   "goal": "Hüfte kräftigen, Knie entlasten. Geht auch zuhause.",
+   "blocks": [
+    {
+     "title": "Routine",
+     "items": [
+      {
+       "ex": "foamroll",
+       "sets": 1,
+       "reps": "je Seite 90 s"
+      },
+      {
+       "ex": "clamshell",
+       "sets": 2,
+       "reps": "15 je Seite",
+       "rest": 20
+      },
+      {
+       "ex": "lateralwalk",
+       "sets": 2,
+       "reps": "15 Schritte je Richtung",
+       "rest": 20
+      },
+      {
+       "ex": "sideplank",
+       "sets": 2,
+       "reps": "10 Beinheben je Seite",
+       "rest": 20
+      },
+      {
+       "ex": "singlebridge",
+       "sets": 2,
+       "reps": "10 je Seite",
+       "rest": 20
+      },
+      {
+       "ex": "stepdown",
+       "sets": 2,
+       "reps": "8 je Seite, 3 s runter",
+       "rest": 30
+      },
+      {
+       "ex": "hipflexor",
+       "sets": 1,
+       "reps": "je Seite 45 s"
+      }
+     ]
+    }
+   ]
+  },
+  "fb": {
+   "name": "Fussballtraining",
+   "tag": "Fussball",
+   "type": "football",
+   "dur": 90,
+   "goal": "Teamtraining. Zählt als intensive Einheit.",
+   "blocks": [
+    {
+     "title": "10 Min vorher",
+     "items": [
+      {
+       "ex": "lateralwalk",
+       "sets": 1,
+       "reps": "15 Schritte je Richtung"
+      },
+      {
+       "ex": "singlebridge",
+       "sets": 1,
+       "reps": "10 je Seite"
+      },
+      {
+       "ex": "sideplank",
+       "sets": 1,
+       "reps": "20 s je Seite"
+      }
+     ]
+    }
+   ],
+   "note": "Kein zusätzliches Lauftraining am selben Tag. Danach Protein und Kohlenhydrate."
+  },
+  "spiel": {
+   "name": "Spiel",
+   "tag": "Match",
+   "type": "football",
+   "dur": 90,
+   "goal": "Spieltag. Am Vortag nur Aktivierung, viel trinken, früh schlafen.",
+   "blocks": [
+    {
+     "title": "Vor dem Einlaufen",
+     "items": [
+      {
+       "ex": "lateralwalk",
+       "sets": 1,
+       "reps": "15 Schritte je Richtung"
+      },
+      {
+       "ex": "singlebridge",
+       "sets": 1,
+       "reps": "10 je Seite"
+      }
+     ]
+    }
+   ]
+  },
+  "ruhe": {
+   "name": "Ruhetag",
+   "tag": "Erholung",
+   "type": "rest",
+   "dur": 0,
+   "goal": "Erholung ist Training. Spazieren ist ok, früh schlafen.",
+   "blocks": []
+  },
+  "race": {
+   "name": "HYROX PARIS",
+   "tag": "Renntag",
+   "type": "accent",
+   "dur": 0,
+   "goal": "Erste 2 km bewusst ruhig. Viel Erfolg!",
+   "blocks": [
+    {
+     "title": "Checkliste",
+     "items": [
+      {
+       "ex": null,
+       "sets": 1,
+       "reps": "Frühstück 3 Stunden vorher, bekannt und leicht"
+      },
+      {
+       "ex": null,
+       "sets": 1,
+       "reps": "10 Min einlaufen, 2 Steigerungen"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "exercises": {
+  "legpress": {
+   "name": "Beinpresse",
+   "cat": "Beine",
+   "equip": "Gerät",
+   "how": [
+    "Füsse hüftbreit in der Mitte der Platte",
+    "Knie zeigen in Richtung Zehen",
+    "Tief bis ca. 90 Grad im Knie, Gesäss bleibt am Polster",
+    "Nicht ganz durchstrecken"
+   ],
+   "err": "Becken rollt unten ab, Knie fallen nach innen",
+   "alt": "Hackenschmidt Maschine"
+  },
+  "hipthrust": {
+   "name": "Hip Thrust",
+   "cat": "Beine",
+   "equip": "Gerät oder Langhantel",
+   "how": [
+    "Oberer Rücken an der Bank, Füsse flach",
+    "Hüfte hochdrücken bis Körper gerade",
+    "Oben Gesäss 1 s anspannen, Kinn zur Brust"
+   ],
+   "err": "Hohlkreuz statt Hüftstreckung",
+   "alt": "Glute Bridge am Boden"
+  },
+  "legcurl": {
+   "name": "Beinbeuger sitzend",
+   "cat": "Beine",
+   "equip": "Gerät",
+   "how": [
+    "Knie auf Höhe der Drehachse",
+    "Fersen kontrolliert nach unten ziehen",
+    "Langsam zurück, 2 s"
+   ],
+   "err": "Schwung, Hüfte hebt ab",
+   "alt": "Beinbeuger liegend"
+  },
+  "legext": {
+   "name": "Beinstrecker",
+   "cat": "Beine",
+   "equip": "Gerät",
+   "how": [
+    "Knie auf Höhe der Drehachse",
+    "Beine strecken, oben 1 s halten",
+    "Nur im schmerzfreien Bereich arbeiten"
+   ],
+   "err": "Zu schwer, Ruck am Anfang",
+   "alt": "Weglassen bei Knieschmerz"
+  },
+  "calfmachine": {
+   "name": "Wadenpresse sitzend",
+   "cat": "Beine",
+   "equip": "Gerät",
+   "how": [
+    "Polster auf den Oberschenkeln, Fussballen auf der Kante",
+    "Ganz hoch drücken, oben 1 s halten",
+    "Langsam tief in die Dehnung"
+   ],
+   "err": "Wippen mit kleinem Bewegungsumfang",
+   "alt": "Einbeinig an der Treppe"
+  },
+  "chestpress": {
+   "name": "Brustpresse",
+   "cat": "Oberkörper",
+   "equip": "Gerät",
+   "how": [
+    "Griffe auf Brusthöhe",
+    "Schulterblätter zusammen und unten lassen",
+    "Kraftvoll drücken, langsam zurück"
+   ],
+   "err": "Schultern kommen nach vorne",
+   "alt": "Kurzhantel Bankdrücken"
+  },
+  "latpull": {
+   "name": "Latzug",
+   "cat": "Oberkörper",
+   "equip": "Kabel",
+   "how": [
+    "Griff etwas breiter als schulterbreit",
+    "Brust raus, Stange zur oberen Brust ziehen",
+    "Ellbogen nach unten führen, kontrolliert hoch"
+   ],
+   "err": "Weit nach hinten lehnen, Schwung",
+   "alt": "Klimmzug mit Band"
+  },
+  "cablerow": {
+   "name": "Rudern am Kabel",
+   "cat": "Oberkörper",
+   "equip": "Kabel",
+   "how": [
+    "Aufrecht sitzen, Knie leicht gebeugt",
+    "Griff zum Bauchnabel ziehen",
+    "Schulterblätter zusammen, langsam nach vorne"
+   ],
+   "err": "Oberkörper schaukelt",
+   "alt": "Rudermaschine mit Brustpolster"
+  },
+  "shoulderpress": {
+   "name": "Schulterpresse",
+   "cat": "Oberkörper",
+   "equip": "Gerät",
+   "how": [
+    "Griffe auf Schulterhöhe",
+    "Nach oben drücken ohne Hohlkreuz",
+    "Kontrolliert zurück"
+   ],
+   "err": "Hohlkreuz",
+   "alt": "Kurzhantel sitzend"
+  },
+  "facepull": {
+   "name": "Face Pull",
+   "cat": "Oberkörper",
+   "equip": "Kabel",
+   "how": [
+    "Seil auf Kopfhöhe",
+    "Zum Gesicht ziehen, Ellbogen hoch und aussen",
+    "Hände am Ende neben den Ohren"
+   ],
+   "err": "Zu schwer, Ellbogen tief",
+   "alt": "Band Pull Apart"
+  },
+  "backext": {
+   "name": "Rückenstrecker",
+   "cat": "Rumpf",
+   "equip": "Gerät",
+   "how": [
+    "Hüfte am Polster",
+    "Aus der Hüfte runter und hoch bis Körper gerade",
+    "Nicht überstrecken"
+   ],
+   "err": "Hohlkreuz oben",
+   "alt": "Rückenstrecker Maschine sitzend"
+  },
+  "cablecrunch": {
+   "name": "Kabel Crunch",
+   "cat": "Rumpf",
+   "equip": "Kabel",
+   "how": [
+    "Kniend, Seil neben dem Kopf",
+    "Rippen Richtung Becken einrollen",
+    "Hüfte bleibt ruhig"
+   ],
+   "err": "Aus der Hüfte ziehen",
+   "alt": "Crunch Maschine"
+  },
+  "pallof": {
+   "name": "Pallof Press",
+   "cat": "Rumpf",
+   "equip": "Kabel",
+   "how": [
+    "Seitlich zum Kabel, Griff vor der Brust",
+    "Arme nach vorne strecken, nicht verdrehen",
+    "2 s halten"
+   ],
+   "err": "Rumpf dreht mit",
+   "alt": "Mit Band"
+  },
+  "sideplank": {
+   "name": "Seitstütz",
+   "cat": "Knie",
+   "equip": "Matte",
+   "how": [
+    "Unterarm unter der Schulter",
+    "Körper in einer Linie, Hüfte hoch",
+    "Fortgeschritten: oberes Bein heben"
+   ],
+   "err": "Hüfte hängt durch",
+   "alt": "Auf den Knien"
+  },
+  "clamshell": {
+   "name": "Clamshell",
+   "cat": "Knie",
+   "equip": "Band",
+   "how": [
+    "Seitlage, Knie 90 Grad, Band über den Knien",
+    "Fersen zusammen, oberes Knie öffnen",
+    "Becken bleibt stabil"
+   ],
+   "err": "Becken dreht mit",
+   "alt": "Ohne Band"
+  },
+  "lateralwalk": {
+   "name": "Monster Walk",
+   "cat": "Knie",
+   "equip": "Band",
+   "how": [
+    "Miniband über den Knien",
+    "Leicht in die Knie",
+    "Seitliche Schritte, Spannung halten"
+   ],
+   "err": "Oberkörper schaukelt",
+   "alt": "Hüftabduktor Gerät"
+  },
+  "singlebridge": {
+   "name": "Einbeinige Brücke",
+   "cat": "Knie",
+   "equip": "Matte",
+   "how": [
+    "Rückenlage, ein Fuss am Boden",
+    "Hüfte über die Ferse hochdrücken",
+    "Becken bleibt waagrecht"
+   ],
+   "err": "Becken kippt",
+   "alt": "Beidbeinig"
+  },
+  "stepdown": {
+   "name": "Step Down",
+   "cat": "Knie",
+   "equip": "Stufe",
+   "how": [
+    "Auf 15 bis 20 cm Stufe stehen",
+    "Freies Bein in 3 s zum Boden senken",
+    "Knie bleibt über der 2. Zehe"
+   ],
+   "err": "Knie fällt nach innen",
+   "alt": "Tiefere Stufe"
+  },
+  "foamroll": {
+   "name": "Faszienrolle Oberschenkel aussen",
+   "cat": "Mobility",
+   "equip": "Rolle",
+   "how": [
+    "Hüftseite und äusserer Oberschenkel",
+    "Langsam rollen, 60 bis 90 s",
+    "Nicht direkt aufs Knie"
+   ],
+   "err": "Zu schnell und zu hart",
+   "alt": "Ball an der Hüftseite"
+  },
+  "hipflexor": {
+   "name": "Hüftbeuger Dehnung",
+   "cat": "Mobility",
+   "equip": "Matte",
+   "how": [
+    "Kniestand, ein Fuss vorne",
+    "Gesäss anspannen, Hüfte nach vorne",
+    "Je 45 s"
+   ],
+   "err": "Hohlkreuz",
+   "alt": "Couch Stretch"
+  },
+  "backsquat": {
+   "name": "Kniebeuge",
+   "cat": "Beine",
+   "equip": "Langhantel",
+   "how": [
+    "Hantel auf dem oberen Rücken",
+    "Knie über die Zehen, Rücken neutral",
+    "Mindestens parallel, über ganzen Fuss hoch"
+   ],
+   "err": "Knie fallen nach innen",
+   "alt": "Beinpresse"
+  },
+  "crosstrainer": {
+   "name": "Crosstrainer",
+   "cat": "Ausdauer",
+   "equip": "Gerät",
+   "how": [
+    "Aufrecht, Arme aktiv",
+    "Locker, sprechen möglich"
+   ],
+   "err": "Auf den Griffen abstützen",
+   "alt": "Rudern"
+  },
+  "row": {
+   "name": "Rudergerät",
+   "cat": "Ausdauer",
+   "equip": "Ergometer",
+   "how": [
+    "Beine, Rücken, Arme",
+    "Zurück: Arme, Rücken, Beine",
+    "Damper 5 bis 6, Frequenz 26 bis 30"
+   ],
+   "err": "Zu früh mit den Armen",
+   "alt": "SkiErg"
+  },
+  "skierg": {
+   "name": "SkiErg",
+   "cat": "Ausdauer",
+   "equip": "Ergometer",
+   "how": [
+    "Arme hoch, Zug aus Lat und Rumpf",
+    "Hüfte beugt mit, Knie wenig",
+    "Hände bis zur Hüfte"
+   ],
+   "err": "Nur aus den Armen",
+   "alt": "Kabel Pullover"
+  },
+  "bike": {
+   "name": "Rolle oder Rennrad",
+   "cat": "Ausdauer",
+   "equip": "Rollentrainer",
+   "how": [
+    "Kadenz 85 bis 95",
+    "Zone 2: sprechen in ganzen Sätzen",
+    "Ventilator und Flasche bereit"
+   ],
+   "err": "Zone 2 zu schnell fahren",
+   "alt": "Spinning Bike"
+  },
+  "treadmill": {
+   "name": "Laufen",
+   "cat": "Ausdauer",
+   "equip": "Laufband oder draussen",
+   "how": [
+    "Kurze schnelle Schritte, Kadenz plus 5 Prozent",
+    "Laufband 1 Prozent Steigung",
+    "Flach, kein langes Bergab"
+   ],
+   "err": "Zu lange Schritte, Ferse knallt auf",
+   "alt": "Crosstrainer"
+  },
+  "wallball": {
+   "name": "Wall Balls",
+   "cat": "Hyrox",
+   "equip": "Ball 6 kg",
+   "how": [
+    "Tiefe Kniebeuge, Ball vor der Brust",
+    "Explosiv hoch, Ball ans 3 m Ziel",
+    "Fangen und direkt in die nächste Beuge"
+   ],
+   "err": "Nicht tief genug",
+   "alt": "Thruster mit Kurzhanteln"
+  },
+  "farmers": {
+   "name": "Farmers Carry",
+   "cat": "Hyrox",
+   "equip": "2 × 24 kg",
+   "how": [
+    "Aufrecht, Schultern weg von den Ohren",
+    "Kurze schnelle Schritte",
+    "Ruhig atmen"
+   ],
+   "err": "Nach vorne lehnen",
+   "alt": "Kurzhanteln"
+  },
+  "bbj": {
+   "name": "Burpee Broad Jumps",
+   "cat": "Hyrox",
+   "equip": "Boden",
+   "how": [
+    "Brust zum Boden",
+    "Hoch und beidbeinig weit springen",
+    "Weich landen, direkt weiter"
+   ],
+   "err": "Hände vor die Füsse setzen",
+   "alt": "Burpee mit kurzem Sprung"
+  },
+  "sblunge": {
+   "name": "Sandbag Lunges",
+   "cat": "Hyrox",
+   "equip": "Sandsack 20 kg",
+   "how": [
+    "Sandsack auf den Schultern",
+    "Hinteres Knie berührt kurz den Boden",
+    "Gleichmässiger Rhythmus"
+   ],
+   "err": "Knie knallt auf",
+   "alt": "Reverse Lunges bei Knieschmerz"
+  },
+  "sledpush": {
+   "name": "Sled Push Ersatz",
+   "cat": "Hyrox",
+   "equip": "Laufband aus",
+   "how": [
+    "Ausgeschaltetes Laufband 30 s schieben",
+    "Oder schwere Beinpresse 12 Wdh",
+    "Körper flach, kurze kräftige Schritte"
+   ],
+   "err": "Aufrecht schieben",
+   "alt": "Vor dem Rennen einmal am echten Sled üben"
+  },
+  "sledpull": {
+   "name": "Sled Pull Ersatz",
+   "cat": "Hyrox",
+   "equip": "Seil",
+   "how": [
+    "Seil an Hantelscheibe auf Matte",
+    "Hand über Hand ziehen, tief sitzen",
+    "Beine arbeiten mit"
+   ],
+   "err": "Nur aus den Armen",
+   "alt": "Kabelzug rückwärts gehen"
+  },
+  "squatmachine": {
+   "name": "Squat Maschine",
+   "cat": "Beine",
+   "equip": "Gerät",
+   "how": [
+    "Schultern unter den Polstern, Füsse schulterbreit etwas vor dem Körper",
+    "Knie zeigen in Richtung Zehen",
+    "Tief bis Oberschenkel parallel, Rücken bleibt am Polster",
+    "Über die ganze Fusssohle hochdrücken, nicht ganz durchstrecken"
+   ],
+   "err": "Fersen heben ab, Knie fallen nach innen",
+   "alt": "Beinpresse"
+  },
+  "legpress1": {
+   "name": "Beinpresse einbeinig",
+   "cat": "Knie",
+   "equip": "Gerät",
+   "how": [
+    "Ein Fuss mittig auf der Platte",
+    "Knie bleibt genau über der 2. Zehe",
+    "Kontrolliert tief bis ca. 90 Grad",
+    "Linkes und rechtes Bein vergleichen"
+   ],
+   "err": "Knie kippt nach innen, Becken dreht",
+   "alt": "Step Down"
+  },
+  "cableabd": {
+   "name": "Hüftabduktion am Kabelzug",
+   "cat": "Knie",
+   "equip": "Kabel mit Fussschlaufe",
+   "how": [
+    "Schlaufe um das äussere Fussgelenk, seitlich zum Kabel stehen",
+    "Bein gestreckt seitlich nach aussen führen",
+    "Oberkörper bleibt aufrecht, nicht zur Seite lehnen",
+    "Langsam zurück, 2 s"
+   ],
+   "err": "Oberkörper kippt, Schwung",
+   "alt": "Monster Walk mit Band"
+  }
+ }
 }
