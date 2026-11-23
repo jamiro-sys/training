@@ -1,5 +1,5 @@
 {
- "version": 3,
+ "version": 4,
  "updated": "2026-11-23",
  "race": {
   "name": "HYROX Paris Grand Palais",
@@ -281,7 +281,7 @@
      "title": "Aufwärmen",
      "items": [
       {
-       "ex": "crosstrainer",
+       "ex": "gymbike",
        "sets": 1,
        "reps": "8 Min locker"
       },
@@ -360,7 +360,7 @@
      "title": "Aufwärmen",
      "items": [
       {
-       "ex": "row",
+       "ex": "gymbike",
        "sets": 1,
        "reps": "6 Min locker"
       },
@@ -436,7 +436,7 @@
      "title": "Aufwärmen",
      "items": [
       {
-       "ex": "row",
+       "ex": "gymbike",
        "sets": 1,
        "reps": "6 Min locker"
       }
@@ -508,9 +508,9 @@
      "title": "Aufwärmen",
      "items": [
       {
-       "ex": "row",
+       "ex": "gymbike",
        "sets": 1,
-       "reps": "5 Min"
+       "reps": "6 Min locker"
       }
      ]
     },
@@ -573,9 +573,9 @@
      "title": "Aufwärmen",
      "items": [
       {
-       "ex": "skierg",
+       "ex": "gymbike",
        "sets": 1,
-       "reps": "4 Min"
+       "reps": "5 Min locker"
       },
       {
        "ex": "cableabd",
@@ -651,7 +651,7 @@
      "title": "Aufwärmen",
      "items": [
       {
-       "ex": "treadmill",
+       "ex": "gymbike",
        "sets": 1,
        "reps": "6 Min locker"
       }
@@ -935,9 +935,9 @@
      "title": "Ablauf",
      "items": [
       {
-       "ex": "crosstrainer",
+       "ex": "gymbike",
        "sets": 1,
-       "reps": "5 Min einlaufen"
+       "reps": "5 Min einfahren"
       },
       {
        "ex": "treadmill",
@@ -1518,6 +1518,18 @@
    ],
    "err": "Oberkörper kippt, Schwung",
    "alt": "Monster Walk mit Band"
+  },
+  "gymbike": {
+   "name": "Velo Ergometer",
+   "cat": "Ausdauer",
+   "equip": "Gerät",
+   "how": [
+    "Sattel so hoch, dass das Knie unten leicht gebeugt bleibt",
+    "Locker starten, Kadenz 85 bis 95",
+    "Widerstand langsam steigern, Puls ruhig hochfahren"
+   ],
+   "err": "Sattel zu tief, das belastet das Knie",
+   "alt": "Crosstrainer"
   }
  }
 }

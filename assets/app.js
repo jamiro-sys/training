@@ -208,8 +208,9 @@ function renderUebungen() {
     $("#exSearch").addEventListener("input", e => { S.exQ = e.target.value; renderUebungen(); });
   }
   $("#exChips").innerHTML = cats.map(c => `<button class="chip" data-cat="${esc(c)}" aria-pressed="${c === S.exCat}">${esc(c)}</button>`).join("");
-  $("#exList").innerHTML = list.length ? list.map(([id, e]) => `<button class="exitem t-${CAT_TYPE[e.cat] || "rest"}" data-ex="${id}"><span class="ic">${esc(e.name.slice(0, 2))}</span><span class="tx"><b>${esc(e.name)}</b><span>${esc(e.cat)} · ${esc(e.equip)}</span></span></button>`).join("")
+  $("#exList").innerHTML = list.length ? list.map(([id, e]) => `<button class="exitem t-${CAT_TYPE[e.cat] || "rest"}" data-ex="${id}"><span class="ic anim-mini" data-anim="${id}" data-still></span><span class="tx"><b>${esc(e.name)}</b><span>${esc(e.cat)} · ${esc(e.equip)}</span></span></button>`).join("")
     : `<div class="empty"><b>Keine Übung gefunden.</b><span>Versuche einen anderen Begriff oder wähle «Alle».</span></div>`;
+  scanAnim($("#exList"));
 }
 
 /* ---------- Fortschritt ---------- */
@@ -275,6 +276,7 @@ let lastFocus = null;
 function openSheet(html) {
   lastFocus = document.activeElement;
   $("#sheetBody").innerHTML = html; $("#sheet").hidden = false; $("#backdrop").hidden = false;
+  scanAnim($("#sheetBody"));
   document.body.style.overflow = "hidden";
   setTimeout(() => $("#sheetClose").focus(), 30);
 }
@@ -298,7 +300,7 @@ function sessionSheet(k, date) {
 function exerciseSheet(id) {
   const e = S.plan.exercises[id];
   const hist = S.logs.filter(l => l.sets && l.sets[id] && l.sets[id].some(x => x.w)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4);
-  openSheet(`<div><p class="eyebrow">${esc(e.cat)} · ${esc(e.equip)}</p><h2 id="sheetTitle" style="margin-top:8px">${esc(e.name)}</h2></div>
+  openSheet(`<div class="anim t-${CAT_TYPE[e.cat] || "rest"}" data-anim="${id}"></div><div><p class="eyebrow">${esc(e.cat)} · ${esc(e.equip)}</p><h2 id="sheetTitle" style="margin-top:8px">${esc(e.name)}</h2></div>
     <div><p class="block-t">So gehts</p><ol class="howlist">${e.how.map(h => `<li>${esc(h)}</li>`).join("")}</ol></div>
     <div class="callout t-gym"><b>Typischer Fehler:</b> ${esc(e.err)}</div>
     <div><p class="block-t">Alternative</p><p>${esc(e.alt)}</p></div>
@@ -352,6 +354,8 @@ function readFinish() {
 }
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
+const scanAnim = root => { if (window.ExAnim) window.ExAnim.scan(root); };
+
 /* ---------- Training Player ---------- */
 const P = { k: null, date: null, steps: [], i: 0, start: 0, timer: null, sets: {}, rest: null };
 function startPlayer(k, date) {
@@ -384,6 +388,7 @@ function renderPlayer() {
     <div class="p-top"><button class="icon-btn" id="pClose" aria-label="Training beenden">${ICON.close}</button><div class="tx"><b>${esc(s.name)}</b><span class="num" id="pTime">${mmss((Date.now() - P.start) / 1000)}</span></div><span class="pill num">${P.i + 1} / ${n}</span></div>
     <div class="p-prog" aria-hidden="true">${P.steps.map((_, j) => `<i class="${j < P.i ? "on" : j === P.i ? "cur" : ""}"></i>`).join("")}</div>
     <div class="p-body">
+      ${e ? `<div class="anim" data-anim="${st.ex}"></div>` : ""}
       <div><p class="eyebrow">${esc(st.block)}</p><h2 style="margin-top:8px">${esc(e ? e.name : st.reps)}</h2></div>
       <div class="p-target"><span class="big num">${st.sets > 1 ? st.sets + " × " : ""}${esc(st.reps)}</span>${st.rest ? `<span class="pill">Pause ${st.rest >= 60 ? (st.rest / 60).toString().replace(".", ",") + " Min" : st.rest + " s"}</span>` : ""}${st.cue ? `<span class="pill accent">${esc(st.cue)}</span>` : ""}</div>
       ${kneeNote}
@@ -393,6 +398,7 @@ function renderPlayer() {
       ${e ? `<button class="btn ghost" data-ex="${st.ex}">${ICON.info} So gehts</button>` : ""}
     </div>
     <div class="p-foot"><button class="btn ghost" id="pPrev" ${P.i === 0 ? "disabled" : ""}>${ICON.left} Zurück</button>${P.i < n - 1 ? `<button class="btn primary" id="pNext">Weiter ${ICON.right}</button>` : `<button class="btn accent" id="pFinish">Abschliessen</button>`}</div>`;
+  scanAnim($("#player"));
 }
 function startRest(sec) {
   if (!sec) return;
