@@ -16,7 +16,7 @@ Deutsch (Schweiz). Kein scharfes s (immer "ss"), keine Gedankenstriche (– oder
    ```json
    {
      "updated": "ISO Zeit",
-     "source": "athletedata (Garmin)",
+     "source": "intervals.icu (Garmin)",
      "readiness": { "score": 0, "label": "Gut", "hrv": 0, "restingHr": 0, "sleepH": 0, "bodyBattery": 0 },
      "days": [ { "date": "YYYY-MM-DD", "hrv": 0, "restingHr": 0, "sleepH": 0, "runKm": 0, "bikeMin": 0 } ],
      "activities": [ { "date": "YYYY-MM-DD", "type": "running", "name": "Lauf", "durMin": 0, "km": 0, "avgHr": 0 } ]
