@@ -84,6 +84,10 @@ function renderHeute() {
   const done = isDone(iso(t), main);
   const left = Math.max(0, days(t, rd));
   const extra = list.filter(k => k !== main).map(k => sess(k).name);
+  // Nächstes Training, falls heute frei oder schon erledigt
+  let nextD = null, nextK = null;
+  if (!s.dur || done) for (let i = 1; i <= 7 && !nextK; i++) { const d = addD(t, i); const k = sessionsFor(d).find(x => sess(x).dur); if (k) { nextD = d; nextK = k; } }
+  const pend = pendingPlayer();
 
   // Phasenfortschritt
   const ph = S.plan.phases.filter(x => x.from <= raceDate());
@@ -127,6 +131,8 @@ function renderHeute() {
   $("#v-heute").innerHTML = `
     <header class="head"><div><p class="eyebrow">${DL[wd(t)]}, ${fmt(t)} · KW ${kw(t)}</p><h1 id="h-heute">${greeting()}</h1></div>
       <button class="icon-btn" data-open="settings" aria-label="Einstellungen"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button></header>
+    ${pend ? `<div class="banner t-${sess(pend.k).type}"><span class="dot"></span><div class="tx"><b>Training läuft: ${esc(sess(pend.k).name)}</b><span>Übung ${pend.i + 1} von ${sess(pend.k).blocks.reduce((a, b) => a + b.items.length, 0)}</span></div><button class="btn accent small" data-resume>Fortsetzen</button><button class="icon-btn" data-resume="drop" aria-label="Laufendes Training verwerfen">${ICON.close}</button></div>` : ""}
+    ${!S.settings.introDone ? `<div class="card intro"><div class="card-h"><h3>So funktioniert die App</h3></div><ol class="howlist"><li><span><b>Training starten</b> führt dich Übung für Übung durch. Haken setzen, die Pause läuft automatisch.</span></li><li><span><b>Kilos</b> von letzter Woche sind schon eingetragen. Du passt nur an, was sich ändert.</span></li><li><span><b>Nach dem Training</b> Anstrengung und Knie bewerten. Daraus passe ich den Plan an.</span></li><li><span>Tippe auf einen <b>Tag in der Woche</b> oder eine <b>Animation</b>, um Details zu sehen.</span></li></ol><button class="btn primary small" data-intro style="margin-top:14px">Verstanden</button></div>` : ""}
     <div class="grid today">
       <article class="hero t-${s.type}">
         ${done ? `<span class="pill good done-badge">${ICON.check.replace("<svg", '<svg style="width:14px;height:14px"')} Erledigt</span>` : ""}
@@ -140,9 +146,10 @@ function renderHeute() {
           <div><b>${esc(TYPE[s.type])}</b><span>Typ</span></div>
         </div>
         <div class="actions">
-          ${s.blocks.length && s.dur ? `<button class="btn accent" data-start="${main}" data-date="${iso(t)}">${ICON.play} Training starten</button>` : ""}
+          ${s.blocks.length && s.dur && !pend ? `<button class="btn ${done ? "ghost" : "accent"}" data-start="${main}" data-date="${iso(t)}">${ICON.play} ${done ? "Nochmals" : "Training starten"}</button>` : ""}
           <button class="btn ghost" data-sess="${main}" data-date="${iso(t)}">Details</button>
         </div>
+        ${nextK ? `<button class="next-up" data-sess="${nextK}" data-date="${iso(nextD)}"><span class="eyebrow">Nächstes Training</span><b>${days(t, nextD) === 1 ? "Morgen" : DL[wd(nextD)]} · ${esc(sess(nextK).name)}</b><span class="muted">${esc(sess(nextK).tag)} · ${sess(nextK).dur} Min</span></button>` : ""}
       </article>
       <div class="grid">
         ${readiness}
@@ -280,7 +287,7 @@ function openSheet(html) {
   document.body.style.overflow = "hidden";
   setTimeout(() => $("#sheetClose").focus(), 30);
 }
-function closeSheet() { $("#sheet").hidden = true; $("#backdrop").hidden = true; document.body.style.overflow = ""; if (lastFocus) lastFocus.focus(); }
+function closeSheet() { $("#sheet").hidden = true; $("#backdrop").hidden = true; if ($("#player").hidden) document.body.style.overflow = ""; if (lastFocus && lastFocus.isConnected) lastFocus.focus(); }
 
 function itemRow(it) {
   const e = it.ex && S.plan.exercises[it.ex];
@@ -357,87 +364,151 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 const scanAnim = root => { if (window.ExAnim) window.ExAnim.scan(root); };
 
 /* ---------- Training Player ---------- */
-const P = { k: null, date: null, steps: [], i: 0, start: 0, timer: null, sets: {}, rest: null };
-function startPlayer(k, date) {
+const P = { k: null, date: null, steps: [], i: 0, start: 0, timer: null, sets: {}, rest: null, list: false };
+const mmss = s => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
+const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch {} };
+function lastSets(ex) { const l = S.logs.filter(x => x.sets && x.sets[ex] && x.sets[ex].some(s => s.w || s.r)).sort((a, b) => b.date.localeCompare(a.date))[0]; return l ? l.sets[ex] : null; }
+const isStrength = st => /^\d/.test(st.reps) && st.sets > 1 && !/(Min|m |km|s$|s je|Schritte|Wdh in)/.test(st.reps + " ");
+const targetReps = st => (st.reps.match(/\d+/) || [""])[0];
+function timedSec(st) {
+  if (isStrength(st) || /\bbis\b/.test(st.reps)) return 0;
+  const m = st.reps.match(/(\d+)\s*Min\b/); if (m) return +m[1] * 60;
+  const x = st.reps.match(/(\d+)\s*s\b/); return x ? +x[1] : 0;
+}
+const stepName = st => { const e = st.ex && S.plan.exercises[st.ex]; return e ? e.name : st.reps; };
+const savePlayer = () => store.set("player", { k: P.k, date: P.date, i: P.i, start: P.start, sets: P.sets, saved: Date.now() });
+const clearPlayer = () => { try { localStorage.removeItem("pp27.player"); } catch {} };
+function pendingPlayer() { const p = store.get("player", null); return p && p.k && S.plan.sessions[p.k] && Date.now() - p.saved < 12 * 3600e3 ? p : null; }
+
+function startPlayer(k, date, resume) {
   const s = sess(k);
-  P.k = k; P.date = date; P.i = 0; P.start = Date.now(); P.sets = {};
+  P.k = k; P.date = date; P.i = 0; P.start = Date.now(); P.sets = {}; P.list = false;
+  if (resume) { P.i = resume.i; P.start = resume.start; P.sets = resume.sets || {}; }
   P.steps = []; s.blocks.forEach(b => b.items.forEach(it => P.steps.push({ ...it, block: b.title })));
+  P.i = Math.min(P.i, P.steps.length - 1);
   closeSheet();
   $("#player").hidden = false; $("#player").className = "player t-" + s.type;
   document.body.style.overflow = "hidden";
-  clearInterval(P.timer); P.timer = setInterval(tick, 1000);
+  clearInterval(P.timer); P.timer = setInterval(() => { const el = $("#pTime"); if (el) el.textContent = mmss((Date.now() - P.start) / 1000); }, 1000);
   try { navigator.wakeLock && navigator.wakeLock.request("screen").then(l => P.lock = l).catch(() => {}); } catch {}
-  renderPlayer();
+  savePlayer(); renderPlayer();
 }
-const mmss = s => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
-function tick() { const el = $("#pTime"); if (el) el.textContent = mmss((Date.now() - P.start) / 1000); }
-function lastSets(ex) { const l = S.logs.filter(x => x.sets && x.sets[ex] && x.sets[ex].some(s => s.w || s.r)).sort((a, b) => b.date.localeCompare(a.date))[0]; return l ? l.sets[ex] : null; }
-const isStrength = st => /^\d/.test(st.reps) && st.sets > 1 && !/(Min|m |km|s$|s je|Schritte|Wdh in)/.test(st.reps + " ");
+function ensureRows(i) {
+  const st = P.steps[i];
+  if (P.sets[i]) return P.sets[i];
+  const prev = st.ex && isStrength(st) ? lastSets(st.ex) : null;
+  return (P.sets[i] = Array.from({ length: st.sets || 1 }, (_, j) => ({ w: prev && prev[j] && prev[j].w ? String(prev[j].w) : (prev && prev[0] && prev[0].w ? String(prev[0].w) : ""), r: "", d: false })));
+}
+const stepDone = i => !!P.sets[i] && P.sets[i].every(x => x.d);
 function renderPlayer() {
   const s = sess(P.k), st = P.steps[P.i], e = st.ex && S.plan.exercises[st.ex];
-  const n = P.steps.length;
-  if (!P.sets[P.i]) P.sets[P.i] = Array.from({ length: st.sets || 1 }, () => ({ w: "", r: "", d: false }));
-  const rows = P.sets[P.i];
-  const strength = isStrength(st);
-  const prev = st.ex ? lastSets(st.ex) : null;
+  const n = P.steps.length, rows = ensureRows(P.i), strength = isStrength(st), prev = st.ex ? lastSets(st.ex) : null;
+  const tsec = timedSec(st), allDone = rows.every(x => x.d), next = P.steps[P.i + 1];
   const setRows = rows.map((r, j) => strength
-    ? `<div class="set${r.d ? " done" : ""}"><span class="no">${j + 1}</span><input inputmode="decimal" aria-label="Satz ${j + 1} Gewicht kg" placeholder="${prev && prev[j] && prev[j].w ? esc(prev[j].w) : "kg"}" value="${esc(r.w)}" data-set="${j}" data-f="w"><input inputmode="numeric" aria-label="Satz ${j + 1} Wiederholungen" placeholder="${esc((st.reps.match(/\d+/) || [""])[0])}" value="${esc(r.r)}" data-set="${j}" data-f="r"><button class="ok${r.d ? " on" : ""}" data-done="${j}" aria-label="Satz ${j + 1} erledigt" aria-pressed="${r.d}">${ICON.check}</button></div>`
+    ? `<div class="set${r.d ? " done" : ""}"><span class="no">${j + 1}</span><input inputmode="decimal" aria-label="Satz ${j + 1} Gewicht in kg" placeholder="kg" value="${esc(r.w)}" data-set="${j}" data-f="w"><input inputmode="numeric" aria-label="Satz ${j + 1} Wiederholungen" placeholder="${esc(targetReps(st))}" value="${esc(r.r)}" data-set="${j}" data-f="r"><button class="ok${r.d ? " on" : ""}" data-done="${j}" aria-label="Satz ${j + 1} erledigt" aria-pressed="${r.d}">${ICON.check}</button></div>`
     : `<div class="set${r.d ? " done" : ""}" style="grid-template-columns:34px 1fr 48px"><span class="no">${j + 1}</span><span style="font-weight:600">${esc(st.reps)}</span><button class="ok${r.d ? " on" : ""}" data-done="${j}" aria-label="Durchgang ${j + 1} erledigt" aria-pressed="${r.d}">${ICON.check}</button></div>`).join("");
   const kneeNote = st.ex === "treadmill" && (s.knee || P.k === "ausdLang" || P.k === "hx3" || P.k === "simu") ? `<div class="callout t-accent"><b>Knie Stufe ${S.settings.kneeStage}:</b> ${esc(S.plan.kneeStages[S.settings.kneeStage].text)}</div>` : "";
+  const overview = P.list ? `<div class="p-list" role="list">${P.steps.map((x, j) => `<button class="p-li${j === P.i ? " cur" : ""}" data-jump="${j}" role="listitem"><span class="ck${stepDone(j) ? " on" : ""}">${stepDone(j) ? ICON.check : j + 1}</span><span class="tx"><b>${esc(stepName(x))}</b><span>${esc(x.block)} · ${x.sets > 1 ? x.sets + " × " : ""}${esc(x.reps)}</span></span></button>`).join("")}</div>` : "";
+  const nextBtn = P.i < n - 1 ? `<button class="btn ${allDone ? "accent" : "primary"}" id="pNext">${allDone ? "Nächste Übung" : "Weiter"} ${ICON.right}</button>` : `<button class="btn accent" id="pFinish">${ICON.check} Abschliessen</button>`;
   $("#player").innerHTML = `
-    <div class="p-top"><button class="icon-btn" id="pClose" aria-label="Training beenden">${ICON.close}</button><div class="tx"><b>${esc(s.name)}</b><span class="num" id="pTime">${mmss((Date.now() - P.start) / 1000)}</span></div><span class="pill num">${P.i + 1} / ${n}</span></div>
-    <div class="p-prog" aria-hidden="true">${P.steps.map((_, j) => `<i class="${j < P.i ? "on" : j === P.i ? "cur" : ""}"></i>`).join("")}</div>
-    <div class="p-body">
-      ${e ? `<div class="anim" data-anim="${st.ex}"></div>` : ""}
-      <div><p class="eyebrow">${esc(st.block)}</p><h2 style="margin-top:8px">${esc(e ? e.name : st.reps)}</h2></div>
+    <div class="p-top"><button class="icon-btn" id="pClose" aria-label="Training beenden">${ICON.close}</button><div class="tx"><b>${esc(s.name)}</b><span class="num" id="pTime">${mmss((Date.now() - P.start) / 1000)}</span></div><button class="pill num p-count" id="pList" aria-expanded="${P.list}" aria-label="Alle Übungen anzeigen">${P.i + 1} / ${n} ${P.list ? ICON.close.replace("<svg", '<svg style="width:12px;height:12px"') : "☰"}</button></div>
+    <div class="p-prog" aria-hidden="true">${P.steps.map((_, j) => `<i class="${stepDone(j) ? "on" : j === P.i ? "cur" : ""}"></i>`).join("")}</div>
+    ${overview}
+    <div class="p-body"${P.list ? " hidden" : ""}>
+      ${e ? `<button class="anim anim-btn" data-anim="${st.ex}" data-ex="${st.ex}" aria-label="Anleitung ${esc(e.name)} öffnen"></button>` : ""}
+      <div><p class="eyebrow">${esc(st.block)}</p><h2 style="margin-top:8px">${esc(stepName(st))}</h2></div>
       <div class="p-target"><span class="big num">${st.sets > 1 ? st.sets + " × " : ""}${esc(st.reps)}</span>${st.rest ? `<span class="pill">Pause ${st.rest >= 60 ? (st.rest / 60).toString().replace(".", ",") + " Min" : st.rest + " s"}</span>` : ""}${st.cue ? `<span class="pill accent">${esc(st.cue)}</span>` : ""}</div>
       ${kneeNote}
-      ${prev && strength ? `<p class="last">Letztes Mal: ${prev.filter(x => x.w || x.r).map(x => (x.w || "-") + " × " + (x.r || "-")).join(", ")}</p>` : ""}
+      ${prev && strength ? `<p class="last">Letztes Mal: ${prev.filter(x => x.w || x.r).map(x => (x.w || "-") + " kg × " + (x.r || "-")).join(", ")}</p>` : ""}
+      ${tsec && !allDone ? `<button class="btn accent block" id="pTimer">${ICON.play} Timer starten · ${mmss(tsec)}</button>` : ""}
       ${strength ? `<div class="set-h"><span>Satz</span><span>kg</span><span>Wdh</span><span></span></div>` : ""}
       <div class="sets">${setRows}</div>
+      ${strength && !allDone ? `<p class="hint">Gewicht eintragen und Haken setzen. Leere Wiederholungen zählen als ${esc(targetReps(st))}.</p>` : ""}
+      ${allDone && next ? `<div class="up-next"><span class="eyebrow">Als nächstes</span><b>${esc(stepName(next))}</b><span class="muted">${next.sets > 1 ? next.sets + " × " : ""}${esc(next.reps)}</span></div>` : ""}
       ${e ? `<button class="btn ghost" data-ex="${st.ex}">${ICON.info} So gehts</button>` : ""}
     </div>
-    <div class="p-foot"><button class="btn ghost" id="pPrev" ${P.i === 0 ? "disabled" : ""}>${ICON.left} Zurück</button>${P.i < n - 1 ? `<button class="btn primary" id="pNext">Weiter ${ICON.right}</button>` : `<button class="btn accent" id="pFinish">Abschliessen</button>`}</div>`;
+    <div class="p-foot"><button class="btn ghost" id="pPrev" ${P.i === 0 ? "disabled" : ""} aria-label="Vorherige Übung">${ICON.left}</button>${nextBtn}</div>`;
   scanAnim($("#player"));
 }
-function startRest(sec) {
-  if (!sec) return;
+function go(i) { stopRest(); P.i = Math.max(0, Math.min(P.steps.length - 1, i)); P.list = false; savePlayer(); renderPlayer(); const b = $(".p-body"); if (b) b.scrollTop = 0; }
+
+/* Countdown Overlay: Pause zwischen Sätzen oder Arbeitszeit bei Zeitübungen */
+function countdown(sec, { label, sub, then, work }) {
   stopRest();
-  const el = document.createElement("div"); el.className = "rest"; el.id = "rest";
-  const end = Date.now() + sec * 1000; P.rest = { end, total: sec, el };
-  el.innerHTML = `<div class="rest-in"><p class="eyebrow">Pause</p><div class="ring" id="rRing"></div><div class="row"><button class="btn ghost" id="rMinus">−15 s</button><button class="btn ghost" id="rPlus">+15 s</button></div><button class="btn primary" id="rSkip">Weiter</button></div>`;
-  document.body.appendChild(el);
-  const draw = () => { const left = Math.max(0, (P.rest.end - Date.now()) / 1000); $("#rRing").innerHTML = ring(left / P.rest.total, "var(--c,var(--accent))", 230, 12) + `<div class="v"><div><b class="num">${mmss(Math.ceil(left))}</b></div></div>`; if (left <= 0) { try { navigator.vibrate && navigator.vibrate([120, 80, 120]); } catch {} stopRest(); } };
+  const el = document.createElement("div"); el.className = "rest" + (work ? " work" : ""); el.id = "rest";
+  P.rest = { end: Date.now() + sec * 1000, total: sec, el, then };
+  el.innerHTML = `<div class="rest-in"><p class="eyebrow">${esc(label)}</p><div class="ring" id="rRing"></div>${sub ? `<p class="rest-sub">${sub}</p>` : ""}<div class="row"><button class="btn ghost" id="rMinus">−15 s</button><button class="btn ghost" id="rPlus">+15 s</button></div><button class="btn primary" id="rSkip">${work ? "Fertig" : "Pause überspringen"}</button></div>`;
   el.style.setProperty("--c", getComputedStyle($("#player")).getPropertyValue("--c"));
+  document.body.appendChild(el);
+  const draw = () => {
+    if (!P.rest) return;
+    const left = Math.max(0, (P.rest.end - Date.now()) / 1000);
+    $("#rRing").innerHTML = ring(left / P.rest.total, "var(--c,var(--accent))", 230, 12) + `<div class="v"><div><b class="num">${mmss(Math.ceil(left))}</b></div></div>`;
+    if (left <= 0) { buzz([120, 80, 120]); endRest(); }
+  };
   draw(); P.rest.iv = setInterval(draw, 250);
   $("#rSkip").focus();
 }
 function stopRest() { if (P.rest) { clearInterval(P.rest.iv); P.rest.el.remove(); P.rest = null; } }
+function endRest() { const f = P.rest && P.rest.then; stopRest(); if (f) f(); }
+
+function afterCheck(j) {
+  const st = P.steps[P.i], rows = P.sets[P.i], n = P.steps.length;
+  const open = rows.filter(x => !x.d).length;
+  if (open > 0) { if (st.rest) countdown(st.rest, { label: "Pause", sub: `Als nächstes: Satz ${rows.findIndex(x => !x.d) + 1} von ${rows.length}` }); return; }
+  if (P.i >= n - 1) { renderPlayer(); toast("Letzte Übung geschafft"); return; }
+  const nx = P.steps[P.i + 1];
+  if (st.rest) countdown(st.rest, { label: "Pause", sub: `Als nächstes: <b>${esc(stepName(nx))}</b>`, then: () => go(P.i + 1) });
+  else setTimeout(() => go(P.i + 1), 450);
+}
 function closePlayer() { clearInterval(P.timer); stopRest(); try { P.lock && P.lock.release(); } catch {} $("#player").hidden = true; document.body.style.overflow = ""; }
+function askClose() {
+  const any = Object.values(P.sets).some(a => a.some(x => x.d));
+  openSheet(`<h2 id="sheetTitle">Training beenden?</h2><p class="muted">${any ? "Du hast schon Sätze erledigt. Speichere das Training, damit es im Logbuch erscheint." : "Noch nichts erledigt."}</p>
+    <div class="stack">${any ? `<button class="btn accent block" id="cSave">Speichern und beenden</button>` : ""}<button class="btn primary block" id="cBack">Weitermachen</button><button class="btn ghost block" id="cDrop">Verwerfen</button></div>`);
+  $("#cBack").addEventListener("click", closeSheet);
+  if (any) $("#cSave").addEventListener("click", () => { closeSheet(); finishPlayer(); });
+  $("#cDrop").addEventListener("click", e => { if (e.currentTarget.dataset.c !== "1") { e.currentTarget.dataset.c = "1"; e.currentTarget.textContent = "Wirklich verwerfen?"; e.currentTarget.style.color = "var(--bad)"; return; } closeSheet(); closePlayer(); clearPlayer(); renderHeute(); toast("Training verworfen"); });
+}
 function finishPlayer() {
   const mins = Math.max(1, Math.round((Date.now() - P.start) / 60000));
   const s = sess(P.k);
+  const doneSets = Object.values(P.sets).reduce((a, r) => a + r.filter(x => x.d).length, 0);
+  let kg = 0; P.steps.forEach((st, i) => { if (P.sets[i] && isStrength(st)) P.sets[i].forEach(x => { if (x.d) kg += (parseFloat(String(x.w).replace(",", ".")) || 0) * (parseInt(x.r || targetReps(st)) || 0); }); });
   closePlayer();
-  openSheet(`<div><p class="eyebrow">Geschafft · ${mins} Min</p><h2 id="sheetTitle" style="margin-top:8px">${esc(s.name)}</h2></div>${finishFields()}<button class="btn accent block" id="fSave">Speichern</button>`);
+  openSheet(`<div><p class="eyebrow">Geschafft</p><h2 id="sheetTitle" style="margin-top:8px">${esc(s.name)}</h2></div>
+    <div class="stats" style="margin:0"><div class="stat"><b class="num">${mins}</b><span>Minuten</span></div><div class="stat"><b class="num">${doneSets}</b><span>Sätze</span></div><div class="stat"><b class="num">${kg ? Math.round(kg).toLocaleString("de-CH") : "-"}</b><span>kg bewegt</span></div></div>
+    ${finishFields()}<button class="btn accent block" id="fSave">Speichern</button>`);
   bindScales();
   $("#fSave").addEventListener("click", () => {
     const sets = {};
-    P.steps.forEach((st, i) => { if (st.ex && P.sets[i] && isStrength(st)) { const v = P.sets[i].filter(x => x.w || x.r).map(x => ({ w: x.w, r: x.r })); if (v.length) sets[st.ex] = (sets[st.ex] || []).concat(v); } });
+    P.steps.forEach((st, i) => { if (st.ex && P.sets[i] && isStrength(st)) { const v = P.sets[i].filter(x => x.d && (x.w || x.r)).map(x => ({ w: x.w, r: x.r || targetReps(st) })); if (v.length) sets[st.ex] = (sets[st.ex] || []).concat(v); } });
     S.logs.push({ id: uid(), date: P.date, session: P.k, dur: mins, ...readFinish(), sets, ts: new Date().toISOString() });
-    saveLogs(); closeSheet(); renderAll(); toast("Training gespeichert");
+    saveLogs(); clearPlayer(); closeSheet(); renderAll(); toast("Training gespeichert");
   });
+}
+
+/* Tagesansicht aus der Wochenleiste */
+function daySheet(date) {
+  const d = pd(date), ks = sessionsFor(d);
+  const real = ks.filter(k => sess(k).dur);
+  if (real.length === 1 && ks.length === 1) return sessionSheet(real[0], date);
+  openSheet(`<div><p class="eyebrow">${DL[wd(d)]}, ${fmt(d)}</p><h2 id="sheetTitle" style="margin-top:8px">${real.length ? "Dein Tag" : "Ruhetag"}</h2></div>
+    <div class="ss" style="display:flex;flex-direction:column;gap:8px">${ks.map(k => { const s = sess(k), dn2 = isDone(date, k); return `<button class="srow t-${s.type}" data-sess="${k}" data-date="${date}"><span class="bar"></span><span class="tx"><b>${esc(s.name)}</b><span>${esc(s.tag)}${s.dur ? " · " + s.dur + " Min" : ""}</span></span>${s.dur ? `<span class="ck${dn2 ? " on" : ""}">${dn2 ? ICON.check : ""}</span>` : ""}</button>`; }).join("") || '<p class="muted">Kein Training geplant.</p>'}</div>`);
 }
 
 /* ---------- Events ---------- */
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-start],[data-sess],[data-ex],[data-day],[data-week],[data-mode],[data-cat],[data-open],[data-knee],[data-setknee],[data-quicklog],[data-del],[data-theme-set],[data-done]");
+  const t = e.target.closest("[data-resume],[data-intro],[data-jump],[data-start],[data-sess],[data-ex],[data-day],[data-week],[data-mode],[data-cat],[data-open],[data-knee],[data-setknee],[data-quicklog],[data-del],[data-theme-set],[data-done]");
   if (!t) return;
   const d = t.dataset;
+  if (d.resume !== undefined) { const r = pendingPlayer(); if (d.resume === "drop") { clearPlayer(); renderHeute(); return toast("Training verworfen"); } return r && startPlayer(r.k, r.date, r); }
+  if (d.intro !== undefined) { S.settings.introDone = true; saveSettings(); return renderHeute(); }
   if (d.start) return startPlayer(d.start, d.date);
   if (d.quicklog) return logSheet(d.quicklog, d.date);
   if (d.sess) return sessionSheet(d.sess, d.date);
   if (d.ex) return exerciseSheet(d.ex);
-  if (d.day) { S.week = monday(pd(d.day)); S.planMode = "woche"; location.hash = "plan"; return; }
+  if (d.day) return daySheet(d.day);
   if (d.week) { S.week = d.week === "0" ? monday(now()) : addD(S.week, 7 * +d.week); return renderPlan(); }
   if (d.mode) { S.planMode = d.mode; return renderPlan(); }
   if (d.cat) { S.exCat = d.cat; return renderUebungen(); }
@@ -452,22 +523,28 @@ document.addEventListener("click", e => {
     S.logs = S.logs.filter(l => l.id !== d.del); saveLogs(); renderAll(); return toast("Gelöscht");
   }
   if (d.done !== undefined && t.closest("#player")) {
-    const j = +d.done, row = P.sets[P.i][j]; row.d = !row.d;
-    const st = P.steps[P.i];
-    renderPlayer();
-    if (row.d && st.rest && P.sets[P.i].some(x => !x.d)) startRest(st.rest);
+    const j = +d.done, st = P.steps[P.i], row = P.sets[P.i][j]; row.d = !row.d;
+    if (row.d && isStrength(st) && !row.r) row.r = targetReps(st);
+    savePlayer(); renderPlayer();
+    if (row.d) { buzz(25); afterCheck(j); }
   }
+  if (d.jump !== undefined) return go(+d.jump);
 });
 document.addEventListener("input", e => {
   const el = e.target; if (el.dataset.set === undefined || !el.closest("#player")) return;
-  P.sets[P.i][+el.dataset.set][el.dataset.f] = el.value;
+  const rows = P.sets[P.i], j = +el.dataset.set; rows[j][el.dataset.f] = el.value;
+  // Gewicht in die folgenden, noch offenen Sätze übernehmen
+  if (el.dataset.f === "w") rows.forEach((r, k) => { if (k > j && !r.d) { r.w = el.value; const inp = document.querySelector(`#player [data-set="${k}"][data-f="w"]`); if (inp) inp.value = el.value; } });
+  savePlayer();
 });
 document.addEventListener("click", e => {
-  if (e.target.closest("#pClose")) { const any = Object.values(P.sets).some(a => a.some(x => x.d)); if (any) return finishPlayer(); return closePlayer(); }
-  if (e.target.closest("#pNext")) { P.i++; renderPlayer(); $(".p-body").scrollTop = 0; }
-  if (e.target.closest("#pPrev")) { P.i--; renderPlayer(); }
-  if (e.target.closest("#pFinish")) finishPlayer();
-  if (e.target.closest("#rSkip")) stopRest();
+  if (e.target.closest("#pClose")) return askClose();
+  if (e.target.closest("#pList")) { P.list = !P.list; return renderPlayer(); }
+  if (e.target.closest("#pNext")) return go(P.i + 1);
+  if (e.target.closest("#pPrev")) return go(P.i - 1);
+  if (e.target.closest("#pFinish")) return finishPlayer();
+  if (e.target.closest("#pTimer")) { const st = P.steps[P.i]; const j = P.sets[P.i].findIndex(x => !x.d); return countdown(timedSec(st), { label: stepName(st), sub: st.sets > 1 ? `Durchgang ${j + 1} von ${st.sets}` : "", work: true, then: () => { const row = P.sets[P.i][j]; if (row && !row.d) { row.d = true; savePlayer(); renderPlayer(); afterCheck(j); } } }); }
+  if (e.target.closest("#rSkip")) return endRest();
   if (e.target.closest("#rPlus") && P.rest) { P.rest.end += 15000; P.rest.total += 15; }
   if (e.target.closest("#rMinus") && P.rest) { P.rest.end -= 15000; }
   if (e.target.closest("#exportBtn")) exportLogs();
@@ -476,7 +553,11 @@ document.addEventListener("change", e => { if (e.target.id === "importFile") imp
 $("#sheetClose").addEventListener("click", closeSheet);
 $("#backdrop").addEventListener("click", closeSheet);
 $("#openSettings").addEventListener("click", settingsSheet);
-document.addEventListener("keydown", e => { if (e.key === "Escape") { if (P.rest) stopRest(); else if (!$("#sheet").hidden) closeSheet(); } });
+document.addEventListener("keydown", e => { if (e.key === "Escape") { if (!$("#sheet").hidden) closeSheet(); else if (P.rest) endRest(); else if (!$("#player").hidden) askClose(); } });
+// Wochen im Plan mit Wischen wechseln
+let sx = null, sy = null;
+$("#v-plan").addEventListener("touchstart", e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+$("#v-plan").addEventListener("touchend", e => { if (sx == null || S.planMode !== "woche") return; const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; sx = null; if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { S.week = addD(S.week, dx < 0 ? 7 : -7); renderPlan(); } }, { passive: true });
 
 function exportLogs() {
   const data = JSON.stringify({ exported: new Date().toISOString(), settings: S.settings, logs: S.logs }, null, 2);
