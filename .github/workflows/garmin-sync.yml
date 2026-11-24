@@ -1,6 +1,6 @@
 name: Garmin Sync
 
-# Holt Garmin Daten über intervals.icu und speichert sie im PRIVATEN Repository jamiro-sys/training-data.
+# Holt Garmin Daten über intervals.icu (ganze Historie beim ersten Lauf) und speichert sie im PRIVATEN Repository jamiro-sys/training-data.
 # Secrets: INTERVALS_API_KEY, INTERVALS_ATHLETE_ID, DATA_REPO_TOKEN (Fine grained token mit Contents Lesen und Schreiben für training-data)
 
 on:
