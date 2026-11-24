@@ -1,5 +1,5 @@
 /* Plan Paris 27 · Look: dunkel, ruhig, Kennzahlen im Mittelpunkt (inspiriert von Wearable Apps).
-   Typo: Barlow für Zahlen und Titel, Inter für Text. Farben: Erholung grün/gelb/rot, Belastung blau, Schlaf violettgrau. */
+   Typo: Saira Semi Condensed für Zahlen und Titel, Figtree für Text. Farben: Erholung grün/gelb/rot, Belastung blau, Schlaf violettgrau. */
 :root{
   --bg:#07080A; --surface:#121418; --surface-2:#1B1E23; --line:#22262C; --fg:#F5F7FA; --muted:#8B929B; --faint:#4B525B;
   --accent:#1FA3FF; --accent-ink:#04121E;
@@ -8,9 +8,9 @@
   --good:#2EE6A6; --warn:#FFD23F; --bad:#FF4D6A;
   --shadow:0 24px 70px rgba(0,0,0,.6);
   --r:20px; --r-s:14px;
-  --f-display:"Barlow","Inter",system-ui,sans-serif;
-  --f-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --f-mono:"Barlow","Inter",system-ui,sans-serif;
+  --f-display:"Saira Semi Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"Saira Semi Condensed","Arial Narrow",system-ui,sans-serif;
   --tab-h:64px;
   --ease:cubic-bezier(.22,.9,.24,1);
   --anim-fg:#F5F7FA; --anim-far:#5E6570; --anim-prop:#3A4048; --anim-line:#2A2F36; --anim-accent:var(--c,var(--accent));
