@@ -1,5 +1,5 @@
 {
- "version": 10,
+ "version": 11,
  "updated": "2026-11-24",
  "race": {
   "name": "HYROX Paris Grand Palais",
@@ -114,14 +114,14 @@
    "from": "2027-01-18",
    "to": "2027-02-28",
    "color": "football",
-   "goal": "Fussball Mo, Di, Do. Gym Mo (Oberkörper vor dem Training), Mi Kraft plus Stationen, Fr Hyrox Ausdauer. Wochenende Freizeit und Mobility.",
+   "goal": "Mo Gym Oberkörper und Lauftraining Team, Di und Do Fussball auf Kunstrasen, Mi Kraft plus Stationen, Fr Hyrox Ausdauer. Wochenende Freizeit und Mobility.",
    "deload": [
     "2027-02-15"
    ],
    "days": [
     [
      "gB",
-     "fb"
+     "fbLauf"
     ],
     [
      "fb"
@@ -156,7 +156,7 @@
    "days": [
     [
      "gB",
-     "fb"
+     "fbLauf"
     ],
     [
      "fb"
@@ -187,7 +187,7 @@
    "goal": "Volumen minus 40 Prozent, Intensität halten, frisch nach Paris.",
    "days": [
     [
-     "fb"
+     "fbLauf"
     ],
     [
      "fb"
@@ -1081,7 +1081,7 @@
    ]
   },
   "fb": {
-   "name": "Fussballtraining",
+   "name": "Fussball Kunstrasen",
    "tag": "Fussball",
    "type": "football",
    "dur": 90,
@@ -1108,7 +1108,7 @@
      ]
     }
    ],
-   "note": "Kein zusätzliches Lauftraining am selben Tag. Danach Protein und Kohlenhydrate."
+   "note": "Kunstrasen: gründlich aufwärmen, passende Schuhe (AG oder Multinocken), keine abgelaufenen Sohlen. Belastet Knie und Achillessehne stärker. Kein zusätzliches Lauftraining am selben Tag."
   },
   "spiel": {
    "name": "Spiel",
@@ -1170,9 +1170,43 @@
    "name": "Grundlage zuhause",
    "tag": "Zuhause",
    "type": "endurance",
-   "dur": 50,
+   "dur": 60,
    "goal": "Aerobe Basis auf dem Bike, schont das Knie. Rudergerät oder Laufband gehen auch.",
    "blocks": [
+    {
+     "title": "Knie Routine · 10 Min",
+     "items": [
+      {
+       "ex": "clamshell",
+       "sets": 2,
+       "reps": "15 je Seite",
+       "rest": 15
+      },
+      {
+       "ex": "lateralwalk",
+       "sets": 2,
+       "reps": "15 Schritte je Richtung",
+       "rest": 15
+      },
+      {
+       "ex": "singlebridge",
+       "sets": 2,
+       "reps": "10 je Seite",
+       "rest": 15
+      },
+      {
+       "ex": "stepdown",
+       "sets": 2,
+       "reps": "8 je Seite, 3 s runter",
+       "rest": 20
+      },
+      {
+       "ex": "sideplank",
+       "sets": 1,
+       "reps": "30 s je Seite"
+      }
+     ]
+    },
     {
      "title": "Ausdauer",
      "items": [
@@ -1196,12 +1230,6 @@
        "sets": 2,
        "reps": "5 Runden je Richtung",
        "rest": 30
-      },
-      {
-       "ex": "sideplank",
-       "sets": 2,
-       "reps": "30 s je Seite",
-       "rest": 30
       }
      ]
     }
@@ -1212,9 +1240,43 @@
    "name": "Intervalle zuhause",
    "tag": "Zuhause",
    "type": "endurance",
-   "dur": 50,
+   "dur": 60,
    "goal": "Tempohärte für Fussball und Hyrox.",
    "blocks": [
+    {
+     "title": "Knie Routine · 10 Min",
+     "items": [
+      {
+       "ex": "clamshell",
+       "sets": 2,
+       "reps": "15 je Seite",
+       "rest": 15
+      },
+      {
+       "ex": "lateralwalk",
+       "sets": 2,
+       "reps": "15 Schritte je Richtung",
+       "rest": 15
+      },
+      {
+       "ex": "singlebridge",
+       "sets": 2,
+       "reps": "10 je Seite",
+       "rest": 15
+      },
+      {
+       "ex": "stepdown",
+       "sets": 2,
+       "reps": "8 je Seite, 3 s runter",
+       "rest": 20
+      },
+      {
+       "ex": "sideplank",
+       "sets": 1,
+       "reps": "30 s je Seite"
+      }
+     ]
+    },
     {
      "title": "Intervalle",
      "items": [
@@ -1254,10 +1316,44 @@
    "name": "Lauf und Kettlebell",
    "tag": "Zuhause",
    "type": "endurance",
-   "dur": 50,
+   "dur": 60,
    "knee": true,
    "goal": "Laufen nach Knie Stufe, draussen oder Laufband, danach Kettlebell Kraft.",
    "blocks": [
+    {
+     "title": "Knie Routine · 10 Min",
+     "items": [
+      {
+       "ex": "clamshell",
+       "sets": 2,
+       "reps": "15 je Seite",
+       "rest": 15
+      },
+      {
+       "ex": "lateralwalk",
+       "sets": 2,
+       "reps": "15 Schritte je Richtung",
+       "rest": 15
+      },
+      {
+       "ex": "singlebridge",
+       "sets": 2,
+       "reps": "10 je Seite",
+       "rest": 15
+      },
+      {
+       "ex": "stepdown",
+       "sets": 2,
+       "reps": "8 je Seite, 3 s runter",
+       "rest": 20
+      },
+      {
+       "ex": "sideplank",
+       "sets": 1,
+       "reps": "30 s je Seite"
+      }
+     ]
+    },
     {
      "title": "Laufen",
      "items": [
@@ -1446,6 +1542,36 @@
      ]
     }
    ]
+  },
+  "fbLauf": {
+   "name": "Lauftraining Team",
+   "tag": "Fussball",
+   "type": "football",
+   "dur": 75,
+   "goal": "Lauftraining mit der Mannschaft am Montag. Knie im Blick behalten.",
+   "blocks": [
+    {
+     "title": "10 Min vorher",
+     "items": [
+      {
+       "ex": "lateralwalk",
+       "sets": 1,
+       "reps": "15 Schritte je Richtung"
+      },
+      {
+       "ex": "copenhagen",
+       "sets": 1,
+       "reps": "15 s je Seite"
+      },
+      {
+       "ex": "singlebridge",
+       "sets": 1,
+       "reps": "10 je Seite"
+      }
+     ]
+    }
+   ],
+   "note": "Knie Ampel gilt auch hier: ab 3 von 10 Tempo raus oder auf Velo und Rudern ausweichen. Nachher Knie Wert eintragen."
   }
  },
  "exercises": {

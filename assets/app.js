@@ -66,7 +66,32 @@ function sessionsFor(d) {
   return list;
 }
 const sess = k => S.plan.sessions[k];
-const isDone = (date, k) => S.logs.some(l => l.date === date && l.session === k);
+/* App Einträge und Garmin Aktivitäten greifen ineinander: gleiche Einheit am gleichen Tag wird zusammengeführt */
+const GTYPE = t => /Soccer|Football/i.test(t) ? "football" : /Run/i.test(t) ? "run" : /Ride|Cycl|Bike/i.test(t) ? "bike" : /Row|Ski/i.test(t) ? "row" : /Weight|Strength/i.test(t) ? "gym" : /HIIT|Hyrox|Interval|Cardio|Crossfit/i.test(t) ? "hyrox" : /Hike/i.test(t) ? "hike" : "other";
+const SESS_G = { football: ["football"], gym: ["gym", "hyrox"], hyrox: ["hyrox", "gym", "row", "run"], endurance: ["bike", "run", "row", "hike"], accent: ["run", "hyrox"] };
+const gActs = () => { const h = S.history && S.history.activities; return h ? Object.values(h) : ((S.garmin && S.garmin.activities) || []); };
+function sessMatches(k, act) {
+  const s = sess(k); if (!s || ["dehnen", "mob", "knie", "ruhe"].includes(k)) return false;
+  const g = GTYPE(act.type);
+  if (k === "fbLauf" || k === "homeRun") return g === "run" || g === "football";
+  return (SESS_G[s.type] || []).includes(g);
+}
+const _dayCache = new Map();
+function dayEntries(date) {
+  if (_dayCache.has(date)) return _dayCache.get(date);
+  const logs = S.logs.filter(l => l.date === date && !["dehnen", "mob", "knie"].includes(l.session));
+  const acts = gActs().filter(a => a.date === date && !["other"].includes(GTYPE(a.type)) && (a.durMin || 0) >= 10);
+  const used = new Set(), out = [];
+  logs.forEach(l => {
+    const j = acts.findIndex((a, i) => !used.has(i) && sessMatches(l.session, a)); const a = j >= 0 ? acts[j] : null; if (a) used.add(j);
+    const s = sess(l.session);
+    out.push({ date, group: s ? (s.type === "accent" ? "hyrox" : s.type) : "gym", dur: a && a.durMin ? a.durMin : (l.dur || 0), rpe: l.rpe || (a ? rpeFromHr(a.avgHr) : 5), log: l, act: a, name: s ? s.name : "Einheit" });
+  });
+  acts.forEach((a, i) => { if (used.has(i)) return; const g = GTYPE(a.type); out.push({ date, group: g === "football" ? "football" : g === "gym" ? "gym" : g === "hyrox" ? "hyrox" : "endurance", dur: a.durMin || 0, rpe: rpeFromHr(a.avgHr), act: a, name: a.name }); });
+  _dayCache.set(date, out); return out;
+}
+const entriesRange = (a, b) => { const r = []; for (let d = new Date(a); d <= b; d = addD(d, 1)) r.push(...dayEntries(iso(d))); return r; };
+const isDone = (date, k) => S.logs.some(l => l.date === date && l.session === k) || (!["dehnen", "mob", "knie", "ruhe"].includes(k) && gActs().some(a => a.date === date && (a.durMin || 0) >= 10 && sessMatches(k, a)));
 const isDeload = d => { const p = phaseOf(d); return !!(p && p.deload && p.deload.includes(iso(monday(d)))); };
 
 /* ---------- Rendering Helfer ---------- */
@@ -135,8 +160,8 @@ function renderHeute() {
   // Tagesform
   const r = readinessToday();
   let form;
-  if (r && r.src === "check") form = "";
-  else if (r) {
+  if (r) form = "";
+  else if (false) {
     const kv = r.src === "garmin"
       ? `<div><b class="num">${r.g.hrv ?? "-"}</b><span>HRV ms</span></div><div><b class="num">${r.g.restingHr ?? "-"}</b><span>Ruhepuls</span></div><div><b class="num">${r.g.sleepH ?? (sleepFor(iso(addD(now(), -1))) || {}).h ?? "-"}</b><span>Schlaf h</span></div><div><b class="num">${r.g.bodyBattery ?? "-"}</b><span>Body Battery</span></div>`
       : `<div><b class="num">${r.c.sleep}/5</b><span>Schlaf</span></div><div><b class="num">${r.c.energy}/5</b><span>Energie</span></div><div><b class="num">${r.c.sore}/5</b><span>Muskelkater</span></div><div><button class="link" data-checkin="edit">Ändern</button></div>`;
@@ -156,7 +181,7 @@ function renderHeute() {
     const dots = ks.filter(k => sess(k).dur || k === "race").map(k => `<i class="t-${sess(k).type}${isDone(iso(d), k) ? " done" : ""}"></i>`).join("");
     return `<button class="${iso(d) === iso(t) ? "today" : ""}" data-day="${iso(d)}" aria-label="${DL[i]} ${fmt(d)}"><span class="d">${dn}</span><span class="n">${d.getDate()}</span><span class="dots">${dots}</span></button>`;
   }).join("");
-  const weekDone = S.logs.filter(l => l.date >= iso(ws) && l.date <= iso(addD(ws, 6)) && !EASY.includes(l.session)).length;
+  const weekDone = DN.reduce((a, _, i) => { const d = addD(ws, i); return a + sessionsFor(d).filter(k => sess(k).dur && sess(k).type !== "rest" && isDone(iso(d), k)).length; }, 0);
   const weekPlan = DN.reduce((a, _, i) => a + sessionsFor(addD(ws, i)).filter(k => sess(k).dur && sess(k).type !== "rest").length, 0);
   const coach = S.coach && S.coach.message ? `<div class="card span coach-card"><div class="coach"><div class="av" aria-hidden="true"></div><div><p class="eyebrow" style="margin-bottom:6px">Coach · ${esc(S.coach.updated ? fmt(new Date(S.coach.updated)) : "")}</p><p>${esc(S.coach.message)}</p></div></div></div>` : "";
   const ks = S.plan.kneeStages[S.settings.kneeStage];
@@ -260,9 +285,10 @@ function parisCalc() {
 const CAT_TYPE = { Beine: "gym", "Oberkörper": "gym", Rumpf: "gym", Knie: "football", Mobility: "rest", Ausdauer: "endurance", Hyrox: "hyrox" };
 function renderUebungen() {
   const ex = S.plan.exercises;
-  const cats = ["Alle", "Favoriten", ...new Set(Object.values(ex).map(e => e.cat))];
+  const usedEx = new Set(Object.values(S.plan.sessions).flatMap(s => s.blocks.flatMap(b => b.items.map(i => i.ex))).filter(Boolean));
+  const cats = ["Alle", "Favoriten", ...new Set(Object.entries(ex).filter(([id]) => usedEx.has(id)).map(([, e]) => e.cat)), "Alternativen"];
   const q = S.exQ.trim().toLowerCase();
-  const list = Object.entries(ex).filter(([, e]) => (S.exCat === "Alle" || (S.exCat === "Favoriten" ? e.fav : e.cat === S.exCat)) && (!q || (e.name + " " + e.equip + " " + e.cat).toLowerCase().includes(q)));
+  const list = Object.entries(ex).filter(([id, e]) => (S.exCat === "Alternativen" ? !usedEx.has(id) : usedEx.has(id) && (S.exCat === "Alle" || (S.exCat === "Favoriten" ? e.fav : e.cat === S.exCat))) && (!q || (e.name + " " + e.equip + " " + e.cat).toLowerCase().includes(q)));
   const view = $("#v-uebungen");
   if (!view.dataset.ready) {
     view.innerHTML = `<header class="head"><div><p class="eyebrow">${Object.keys(ex).length} Übungen</p><h1>Übungen</h1></div></header>
@@ -297,15 +323,15 @@ function lineChart(points, { min, max, color, label, unit = "", band }) {
 function renderFortschritt() {
   const t = now(), ws = monday(t);
   const L = S.logs.slice().sort((a, b) => (b.date + (b.ts || "")).localeCompare(a.date + (a.ts || "")));
-  const thisWeek = L.filter(l => l.date >= iso(ws)).length;
-  const minutes = L.filter(l => l.date >= iso(addD(t, -27))).reduce((a, l) => a + (l.dur || 0), 0);
+  const thisWeek = entriesRange(ws, t).length;
+  const minutes = entriesRange(addD(t, -27), t).reduce((a, e) => a + (e.dur || 0), 0);
   // Serie: Wochen in Folge mit mindestens 4 Einheiten
-  let streak = 0; for (let i = 1; i < 60; i++) { const a = iso(addD(ws, -7 * i)), b = iso(addD(ws, -7 * i + 6)); if (S.logs.filter(l => l.date >= a && l.date <= b).length >= 4) streak++; else break; }
+  let streak = 0; for (let i = 1; i < 60; i++) { const a = iso(addD(ws, -7 * i)), b = iso(addD(ws, -7 * i + 6)); if (entriesRange(pd(a), pd(b)).length >= 4) streak++; else break; }
 
   const K = S.logs.filter(l => l.knee != null).sort((a, b) => a.date.localeCompare(b.date)).slice(-24).map(l => ({ v: l.knee, l: fmt(pd(l.date)) }));
   // Wochenbalken
   const weeks = []; for (let i = 7; i >= 0; i--) weeks.push(addD(ws, -7 * i));
-  const counts = weeks.map(w => { const a = iso(w), b = iso(addD(w, 6)); const ls = S.logs.filter(l => l.date >= a && l.date <= b); return { n: ls.length, m: ls.reduce((s, l) => s + (l.dur || 0), 0) }; });
+  const counts = weeks.map(w => { const ls = entriesRange(w, addD(w, 6)); return { n: ls.length, m: ls.reduce((s, e) => s + (e.dur || 0), 0) }; });
   const mx = Math.max(6, ...counts.map(c => c.n));
   const W = 340, H = 140, bw = (W - 20) / 8;
   const bars = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Einheiten pro Woche">${counts.map((c, i) => { const h = c.n / mx * (H - 40); return `<rect x="${10 + i * bw + 5}" y="${H - 22 - h}" width="${bw - 10}" height="${Math.max(h, 2)}" rx="5" fill="${i === 7 ? "var(--accent)" : "var(--surface-2)"}"/><text x="${10 + i * bw + bw / 2}" y="${H - 26 - h}" text-anchor="middle">${c.n || ""}</text><text x="${10 + i * bw + bw / 2}" y="${H - 6}" text-anchor="middle">${kw(weeks[i])}</text>`; }).join("")}<line x1="10" x2="${W - 10}" y1="${H - 22 - 5 / mx * (H - 40)}" y2="${H - 22 - 5 / mx * (H - 40)}" stroke="var(--faint)" stroke-dasharray="3 4"/></svg>`;
@@ -329,7 +355,7 @@ function renderFortschritt() {
     <form class="row" id="bodyForm" style="margin-top:12px"><input class="input num" id="bodyKg" inputmode="decimal" placeholder="kg" aria-label="Gewicht in kg" style="flex:1;min-width:100px"><input class="input num" id="bodyWaist" inputmode="decimal" placeholder="Bauch cm" aria-label="Bauchumfang in cm auf Höhe Bauchnabel" style="flex:1;min-width:100px"><button class="btn primary small" type="submit">Eintragen</button></form></div>`;
   // Heatmap 12 Wochen
   const hmStart = addD(ws, -77); let hm = "";
-  for (let w = 0; w < 12; w++) { hm += `<div class="hm-col">`; for (let d = 0; d < 7; d++) { const day = addD(hmStart, w * 7 + d), ds = iso(day); const m = S.logs.filter(l => l.date === ds).reduce((a, l) => a + (l.dur || 30), 0); const lv = day > t ? -1 : m === 0 ? 0 : m < 40 ? 1 : m < 75 ? 2 : 3; hm += `<i class="l${lv}" title="${fmt(day)}${m ? " · " + m + " Min" : ""}"></i>`; } hm += `</div>`; }
+  for (let w = 0; w < 12; w++) { hm += `<div class="hm-col">`; for (let d = 0; d < 7; d++) { const day = addD(hmStart, w * 7 + d), ds = iso(day); const m = dayEntries(ds).reduce((a, e) => a + (e.dur || 30), 0); const lv = day > t ? -1 : m === 0 ? 0 : m < 40 ? 1 : m < 75 ? 2 : 3; hm += `<i class="l${lv}" title="${fmt(day)}${m ? " · " + m + " Min" : ""}"></i>`; } hm += `</div>`; }
   // Rekorde
   const prs = Object.keys(S.plan.exercises).map(id => { const h = exHistory(id); if (!h.length) return null; const b = h.reduce((x, y) => y.best.v > x.best.v ? y : x); return { id, b }; }).filter(Boolean).sort((a, b) => b.b.best.v - a.b.best.v).slice(0, 6);
   const logs = L.slice(0, 30).map(l => { const s = sess(l.session); const d = pd(l.date);
@@ -417,7 +443,7 @@ function logSheet(k, date) {
   const s = k ? sess(k) : null;
   openSheet(`<h2 id="sheetTitle">Einheit eintragen</h2>
     <div class="row"><div class="field" style="flex:1;min-width:140px"><label for="qDate">Datum</label><input class="input" type="date" id="qDate" value="${date || iso(now())}"></div>
-    <div class="field" style="flex:1;min-width:110px"><label for="qDur">Minuten</label><input class="input num" type="number" inputmode="numeric" id="qDur" value="${s ? s.dur : ""}" min="0" max="400"></div></div>
+    <div class="field" style="flex:1;min-width:110px"><label for="qDur">Minuten</label><input class="input num" type="number" inputmode="numeric" id="qDur" value="${(() => { const a = k && gActs().find(x => x.date === (date || iso(now())) && sessMatches(k, x)); return a && a.durMin ? a.durMin : s ? s.dur : ""; })()}" min="0" max="400"></div></div>
     <div class="field"><label for="qSess">Einheit</label><select class="input" id="qSess">${opts}</select></div>
     ${finishFields()}
     <button class="btn accent block" id="qSave">Speichern</button>`);
@@ -505,7 +531,7 @@ function renderPlayer() {
       ${kneeNote}
       ${strength && st.ex && suggest(st) ? `<div class="sug${suggest(st).up ? " up" : ""}"><b>${suggest(st).up ? "↑ " : ""}${fmtKg(suggest(st).w)} kg</b><span>${esc(suggest(st).text)}</span></div>` : ""}
       ${prev && strength ? `<p class="last">Letztes Mal: ${prev.filter(x => x.w || x.r).map(x => (x.w || "-") + " kg × " + (x.r || "-")).join(", ")}</p>` : ""}
-      ${tsec && !allDone ? `<button class="btn accent block" id="pTimer">${ICON.play} Timer starten · ${mmss(tsec)}</button>` : ""}
+      ${tsec && !allDone ? `<button class="btn accent block" id="pTimer">${ICON.play} Timer starten · ${/je Seite/.test(st.reps) ? "2 × " : ""}${mmss(tsec)}</button>` : ""}
       ${strength ? `<div class="set-h"><span>Satz</span><span>kg</span><span>Wdh</span><span></span></div>` : ""}
       <div class="sets">${setRows}</div>
       ${strength && !allDone ? `<p class="hint">Gewicht eintragen und Haken setzen. Leere Wiederholungen zählen als ${esc(targetReps(st))}.</p>` : ""}
@@ -595,11 +621,11 @@ const saveKey = (k, v) => { store.set(k, v); scheduleSync(); };
 /* ---------- Belastungsampel (Sitzungs RPE × Minuten, akut 7 Tage zu chronisch 28 Tage) ---------- */
 const sessLoad = l => (l.dur || 0) * (l.rpe || 5);
 function loadStats(ref = now()) {
-  const sum = (a, b) => S.logs.filter(l => l.date >= iso(a) && l.date <= iso(b)).reduce((x, l) => x + sessLoad(l), 0);
+  const sum = (a, b) => entriesRange(a, b).reduce((x, e) => x + sessLoad(e), 0);
   const acute = sum(addD(ref, -6), ref), chronic = sum(addD(ref, -27), ref) / 4;
   const ratio = chronic > 0 ? acute / chronic : null;
   let st;
-  if (ratio == null || chronic < 400) st = { c: "rest", lvl: 0, t: "Baut sich auf", a: "Nach 2 bis 3 Wochen mit Einträgen (Minuten und Anstrengung) zeigt die Ampel deine Belastung." };
+  if (ratio == null || chronic < 400) st = { c: "rest", lvl: 0, t: "Baut sich auf", a: "Noch zu wenig Training in den letzten 4 Wochen für einen Vergleich. Die Ampel nutzt deine Einträge und Garmin Aktivitäten." };
   else if (ratio > 1.5) st = { c: "bad", lvl: 3, t: "Zu viel auf einmal", a: "Deutlich mehr als du gewohnt bist. Nächste Gym oder Ausdauer Einheit locker oder Ruhetag. Fussball normal." };
   else if (ratio > 1.3) st = { c: "warn", lvl: 2, t: "Hohe Belastung", a: "Gut für Fortschritt, aber nicht lange halten. Schlaf und Essen im Blick." };
   else if (ratio < 0.8) st = { c: "warn", lvl: 1, t: "Weniger als üblich", a: "Eine Entlastungswoche ist ok. Sonst wieder ins normale Volumen zurück." };
@@ -611,7 +637,7 @@ function loadCard() {
   const L = loadStats(), ws = monday(now());
   const weeks = []; for (let i = 7; i >= 0; i--) weeks.push(addD(ws, -7 * i));
   const G = ["football", "gym", "hyrox", "endurance"], GN = { football: "Fussball", gym: "Gym", hyrox: "Hyrox", endurance: "Ausdauer" };
-  const data = weeks.map(w => { const o = {}; G.forEach(g => o[g] = 0); S.logs.filter(l => l.date >= iso(w) && l.date <= iso(addD(w, 6))).forEach(l => { const g = loadGroup(l); if (o[g] != null) o[g] += sessLoad(l); }); return o; });
+  const data = weeks.map(w => { const o = {}; G.forEach(g => o[g] = 0); entriesRange(w, addD(w, 6)).forEach(e => { if (o[e.group] != null) o[e.group] += sessLoad(e); }); return o; });
   const mx = Math.max(1500, ...data.map(o => G.reduce((a, g) => a + o[g], 0)));
   const W = 340, H = 150, bw = (W - 20) / 8;
   const bars = data.map((o, i) => { let y = H - 22; return G.map(g => { const h = o[g] / mx * (H - 36); y -= h; return h > 0 ? `<rect x="${10 + i * bw + 6}" y="${y}" width="${bw - 12}" height="${h}" fill="var(--${g})" rx="2"/>` : ""; }).join("") + `<text x="${10 + i * bw + bw / 2}" y="${H - 6}" text-anchor="middle">${kw(weeks[i])}</text>`; }).join("");
@@ -622,7 +648,7 @@ function loadCard() {
 }
 
 /* ---------- Knie Ampel ---------- */
-const RUN_SESS = ["homeRun", "laufRW", "ausdLang", "hx3", "simu", "spiel"];
+const RUN_SESS = ["fbLauf", "homeRun", "laufRW", "ausdLang", "hx3", "simu", "spiel"];
 function kneeAdvice() {
   const st = S.settings.kneeStage, max = S.plan.kneeStages.length - 1, since = S.settings.kneeStageSince || "2000-01-01";
   const recent = S.logs.filter(l => l.knee != null && l.date >= iso(addD(now(), -7)));
@@ -800,9 +826,9 @@ function icsExport() {
 /* ---------- Wochenrückblick ---------- */
 function reviewSheet(ws) {
   const we = addD(ws, 6), inW = l => l.date >= iso(ws) && l.date <= iso(we);
-  const L = S.logs.filter(inW), planned = DN.reduce((a, _, i) => a + sessionsFor(addD(ws, i)).filter(k => sess(k).dur && k !== "knie").length, 0);
+  const L = entriesRange(ws, we), planned = DN.reduce((a, _, i) => a + sessionsFor(addD(ws, i)).filter(k => sess(k).dur && sess(k).type !== "rest").length, 0);
   const mins = L.reduce((a, l) => a + (l.dur || 0), 0), load = L.reduce((a, l) => a + sessLoad(l), 0);
-  const knees = L.filter(l => l.knee != null).map(l => l.knee), kAvg = knees.length ? knees.reduce((a, b) => a + b, 0) / knees.length : null;
+  const knees = S.logs.filter(inW).filter(l => l.knee != null).map(l => l.knee), kAvg = knees.length ? knees.reduce((a, b) => a + b, 0) / knees.length : null;
   const prs = Object.keys(S.plan.exercises).map(id => { const h = exHistory(id); const before = h.filter(x => x.date < iso(ws)).reduce((m, x) => Math.max(m, x.best.v), 0); const inside = h.filter(x => x.date >= iso(ws) && x.date <= iso(we)); const top = inside.reduce((m, x) => x.best.v > m.best.v ? x : m, { best: { v: 0 } }); return before > 0 && top.best.v > before ? { id, top } : null; }).filter(Boolean);
   const bw = S.body.filter(x => x.date <= iso(we)).sort((a, b) => a.date.localeCompare(b.date)), bNow = bw[bw.length - 1], bPrev = bw.filter(x => x.date < iso(ws)).pop();
   const nws = addD(ws, 7), next = DN.map((dn, i) => { const d = addD(nws, i); const ks = sessionsFor(d).filter(k => sess(k).dur && k !== "knie"); return ks.length ? `<span><b>${dn}</b>${esc(ks.map(k => sess(k).name).join(" + "))}</span>` : ""; }).join("");
@@ -888,11 +914,7 @@ function heuteExtras(main) {
 /* ---------- Kennzahlen Ringe: Erholung, Belastung, Schlaf ---------- */
 const gDay = date => ((S.garmin && S.garmin.days) || []).find(d => d.date === date) || null;
 const rpeFromHr = hr => hr ? Math.max(3, Math.min(9, (hr - 95) / 8)) : 5;
-function dayLoad(date) {
-  const L = S.logs.filter(l => l.date === date);
-  if (L.length) return L.reduce((a, l) => a + sessLoad(l), 0);
-  return ((S.garmin && S.garmin.activities) || []).filter(a => a.date === date).reduce((a, x) => a + (x.durMin || 0) * rpeFromHr(x.avgHr), 0);
-}
+function dayLoad(date) { return dayEntries(date).reduce((a, e) => a + sessLoad(e), 0); }
 const strainOf = load => Math.round(21 * (1 - Math.exp(-load / 700)) * 10) / 10;
 function recoveryFor(date) {
   const c = S.checkins[date];
@@ -935,6 +957,7 @@ function dialSheet(key) {
   if (key === "rec") {
     const v = ds.map(d => recoveryFor(iso(d))), a = avg(v);
     openSheet(`<div><p class="eyebrow">Erholung · 14 Tage</p><h2 id="sheetTitle" style="margin-top:8px">${v[13] != null ? v[13] + " %" : "Noch offen"}</h2><p class="muted">${a != null ? "Schnitt " + Math.round(a) + " %. " : ""}Grün ab 67 Prozent: bereit für hohe Belastung. Gelb: normal trainieren. Rot: Erholung vor Intensität.</p></div>
+      ${(() => { const g = S.garmin && S.garmin.readiness, pr = S.profile || {}, sl = sleepFor(iso(now())) || sleepFor(iso(addD(now(), -1))); return g ? `<div class="stats" style="margin:0"><div class="stat"><b class="num">${g.hrv ?? "?"}</b><span>HRV · Schnitt ${pr.hrvBase ?? "?"}</span></div><div class="stat"><b class="num">${g.restingHr ?? "?"}</b><span>Ruhepuls · Schnitt ${pr.hfRest ?? "?"}</span></div><div class="stat"><b class="num">${sl && sl.h ? hm(sl.h) : "?"}</b><span>Schlaf Std</span></div></div>` : ""; })()}
       <div class="chart">${barSeries(v, lab, recCol, 100, x => x)}</div>
       <div class="callout"><b>Quelle:</b> Garmin HRV und Ruhepuls, sonst dein Check in, sonst die Schlafdauer.</div>`);
   } else if (key === "strain") {
@@ -1027,7 +1050,13 @@ document.addEventListener("click", e => {
   if (e.target.closest("#pNext")) return go(P.i + 1);
   if (e.target.closest("#pPrev")) return go(P.i - 1);
   if (e.target.closest("#pFinish")) return finishPlayer();
-  if (e.target.closest("#pTimer")) { const st = P.steps[P.i]; const j = P.sets[P.i].findIndex(x => !x.d); return countdown(timedSec(st), { label: stepName(st), sub: st.sets > 1 ? `Durchgang ${j + 1} von ${st.sets}` : "", work: true, then: () => { const row = P.sets[P.i][j]; if (row && !row.d) { row.d = true; savePlayer(); renderPlayer(); afterCheck(j); } } }); }
+  if (e.target.closest("#pTimer")) {
+    const st = P.steps[P.i]; const j = P.sets[P.i].findIndex(x => !x.d), sec = timedSec(st), two = /je Seite/.test(st.reps);
+    const sub = side => [st.sets > 1 ? `Durchgang ${j + 1} von ${st.sets}` : "", two ? `Seite ${side} von 2` : ""].filter(Boolean).join(" · ");
+    const finish = () => { const row = P.sets[P.i][j]; if (row && !row.d) { row.d = true; savePlayer(); renderPlayer(); afterCheck(j); } };
+    if (!two) return countdown(sec, { label: stepName(st), sub: sub(1), work: true, then: finish });
+    return countdown(sec, { label: stepName(st), sub: sub(1), work: true, then: () => { buzz([200, 100, 200]); countdown(5, { label: "Seite wechseln", sub: "Gleich geht es weiter", then: () => countdown(sec, { label: stepName(st), sub: sub(2), work: true, then: finish }) }); } });
+  }
   if (e.target.closest("#rSkip")) return endRest();
   if (e.target.closest("#rPlus") && P.rest) { P.rest.end += 15000; P.rest.total += 15; }
   if (e.target.closest("#rMinus") && P.rest) { P.rest.end -= 15000; }
@@ -1152,7 +1181,7 @@ function route() {
 }
 window.addEventListener("hashchange", route);
 function applyTheme() { document.documentElement.setAttribute("data-theme", "dark"); }
-function renderAll() { renderHeute(); renderPlan(); renderUebungen(); renderFortschritt(); countUp($("#v-heute")); scanAnim($("#v-heute")); }
+function renderAll() { _dayCache.clear(); renderHeute(); renderPlan(); renderUebungen(); renderFortschritt(); countUp($("#v-heute")); scanAnim($("#v-heute")); }
 
 /* ---------- Start ---------- */
 /* Persönliche Daten liegen im privaten Repository und werden mit dem eigenen Schlüssel gelesen */
@@ -1196,7 +1225,7 @@ async function load(path, fallback) { try { const r = await fetch(path, { cache:
   applyTheme();
   const [plan, garmin, coach, profile] = await Promise.all([load("data/plan.json", null), privGet("garmin.json"), privGet("coach.json"), privGet("profil.json")]);
   S.profile = profile;
-  privGet("garmin-history.json").then(h => { S.history = h; if (h && S.plan) renderFortschritt(); });
+  privGet("garmin-history.json").then(h => { S.history = h; if (h && S.plan) renderAll(); });
   if (!plan) { $("#v-heute").innerHTML = `<div class="empty"><b>Plan konnte nicht geladen werden.</b><span>Prüfe die Internetverbindung und lade die Seite neu.</span></div>`; return; }
   S.plan = plan; S.garmin = garmin; S.coach = coach; applyProfile();
   window.ExPhotos = {};
