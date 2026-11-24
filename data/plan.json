@@ -1,5 +1,5 @@
 {
- "version": 5,
+ "version": 6,
  "updated": "2026-11-24",
  "race": {
   "name": "HYROX Paris Grand Palais",
@@ -354,7 +354,7 @@
    "tag": "Gym B",
    "type": "gym",
    "dur": 60,
-   "goal": "Zugkraft und Haltung, gute Basis für Rudern und SkiErg.",
+   "goal": "Alle gym80 Oberkörper Maschinen, gute Haltung und Zugkraft für Rudern und SkiErg.",
    "blocks": [
     {
      "title": "Aufwärmen",
@@ -375,55 +375,64 @@
      "title": "Kraft",
      "items": [
       {
-       "ex": "chestpress",
+       "ex": "benchmachine",
        "sets": 4,
        "reps": "8 bis 10",
-       "rest": 90
+       "rest": 90,
+       "cue": "RPE 7 bis 8"
       },
       {
-       "ex": "latpull",
+       "ex": "pullup",
        "sets": 4,
-       "reps": "8 bis 10",
-       "rest": 90
+       "reps": "5 bis 8",
+       "rest": 90,
+       "cue": "Zu schwer? Latzug 8 bis 10"
       },
       {
-       "ex": "cablerow",
+       "ex": "seatedrow",
        "sets": 3,
-       "reps": "10",
+       "reps": "10 bis 12",
        "rest": 75
       },
       {
-       "ex": "shoulderpress",
-       "sets": 3,
-       "reps": "10",
-       "rest": 75
-      },
-      {
-       "ex": "facepull",
-       "sets": 3,
-       "reps": "15",
-       "rest": 45
-      },
-      {
-       "ex": "backext",
+       "ex": "inclinefly",
        "sets": 3,
        "reps": "12",
        "rest": 60
+      },
+      {
+       "ex": "lateralmachine",
+       "sets": 3,
+       "reps": "12 bis 15",
+       "rest": 45
+      },
+      {
+       "ex": "reversefly",
+       "sets": 3,
+       "reps": "15",
+       "rest": 45
       }
      ]
     },
     {
-     "title": "Finisher",
+     "title": "Arme · im Wechsel",
      "items": [
       {
-       "ex": "skierg",
-       "sets": 6,
-       "reps": "1 Min zügig",
+       "ex": "szcurl",
+       "sets": 2,
+       "reps": "10 bis 12",
+       "rest": 30
+      },
+      {
+       "ex": "pushdown",
+       "sets": 2,
+       "reps": "12 bis 15",
        "rest": 60
       }
      ]
     }
-   ]
+   ],
+   "note": "Bei Zeitnot Arme weglassen. Klimmzüge zuerst, solange du frisch bist."
   },
   "gC": {
    "name": "Ganzkörper Zirkel",
@@ -458,7 +467,7 @@
        "rest": 0
       },
       {
-       "ex": "chestpress",
+       "ex": "benchmachine",
        "sets": 4,
        "reps": "12",
        "rest": 0
@@ -478,19 +487,36 @@
      ]
     },
     {
+     "title": "Zusatz",
+     "items": [
+      {
+       "ex": "rdl",
+       "sets": 3,
+       "reps": "10",
+       "rest": 75
+      },
+      {
+       "ex": "dbpress",
+       "sets": 3,
+       "reps": "10",
+       "rest": 75
+      }
+     ]
+    },
+    {
      "title": "Rumpf",
      "items": [
       {
        "ex": "cablecrunch",
-       "sets": 3,
+       "sets": 2,
        "reps": "12",
-       "rest": 45
+       "rest": 30
       },
       {
        "ex": "pallof",
-       "sets": 3,
+       "sets": 2,
        "reps": "10 je Seite",
-       "rest": 45
+       "rest": 30
       }
      ]
     }
@@ -595,13 +621,13 @@
        "cue": "RPE 7 bis 8"
       },
       {
-       "ex": "latpull",
+       "ex": "pullup",
        "sets": 3,
-       "reps": "6 bis 8",
+       "reps": "5 bis 8",
        "rest": 90
       },
       {
-       "ex": "chestpress",
+       "ex": "benchmachine",
        "sets": 3,
        "reps": "6 bis 8",
        "rest": 90
@@ -1099,7 +1125,7 @@
   "legpress": {
    "name": "Beinpresse",
    "cat": "Beine",
-   "equip": "Gerät",
+   "equip": "gym80 Maschine",
    "how": [
     "Füsse hüftbreit in der Mitte der Platte",
     "Knie zeigen in Richtung Zehen",
@@ -1113,7 +1139,7 @@
   "hipthrust": {
    "name": "Hip Thrust",
    "cat": "Beine",
-   "equip": "Gerät oder Langhantel",
+   "equip": "gym80 Maschine",
    "how": [
     "Oberer Rücken an der Bank, Füsse flach",
     "Hüfte hochdrücken bis Körper gerade",
@@ -1126,7 +1152,7 @@
   "legcurl": {
    "name": "Beinbeuger sitzend",
    "cat": "Beine",
-   "equip": "Gerät",
+   "equip": "gym80 Maschine",
    "how": [
     "Knie auf Höhe der Drehachse",
     "Fersen kontrolliert nach unten ziehen",
@@ -1139,7 +1165,7 @@
   "legext": {
    "name": "Beinstrecker",
    "cat": "Beine",
-   "equip": "Gerät",
+   "equip": "gym80 Maschine",
    "how": [
     "Knie auf Höhe der Drehachse",
     "Beine strecken, oben 1 s halten",
@@ -1152,7 +1178,7 @@
   "calfmachine": {
    "name": "Wadenpresse sitzend",
    "cat": "Beine",
-   "equip": "Gerät",
+   "equip": "gym80 Maschine",
    "how": [
     "Polster auf den Oberschenkeln, Fussballen auf der Kante",
     "Ganz hoch drücken, oben 1 s halten",
@@ -1162,23 +1188,10 @@
    "alt": "Einbeinig an der Treppe",
    "photo": "Seated_Calf_Raise"
   },
-  "chestpress": {
-   "name": "Brustpresse",
-   "cat": "Oberkörper",
-   "equip": "Gerät",
-   "how": [
-    "Griffe auf Brusthöhe",
-    "Schulterblätter zusammen und unten lassen",
-    "Kraftvoll drücken, langsam zurück"
-   ],
-   "err": "Schultern kommen nach vorne",
-   "alt": "Kurzhantel Bankdrücken",
-   "photo": "Leverage_Chest_Press"
-  },
   "latpull": {
    "name": "Latzug",
    "cat": "Oberkörper",
-   "equip": "Kabel",
+   "equip": "Kabelturm",
    "how": [
     "Griff etwas breiter als schulterbreit",
     "Brust raus, Stange zur oberen Brust ziehen",
@@ -1189,9 +1202,9 @@
    "photo": "Wide-Grip_Lat_Pulldown"
   },
   "cablerow": {
-   "name": "Rudern am Kabel",
+   "name": "Rudern am Kabelturm",
    "cat": "Oberkörper",
-   "equip": "Kabel",
+   "equip": "Kabelturm",
    "how": [
     "Aufrecht sitzen, Knie leicht gebeugt",
     "Griff zum Bauchnabel ziehen",
@@ -1201,23 +1214,10 @@
    "alt": "Rudermaschine mit Brustpolster",
    "photo": "Seated_Cable_Rows"
   },
-  "shoulderpress": {
-   "name": "Schulterpresse",
-   "cat": "Oberkörper",
-   "equip": "Gerät",
-   "how": [
-    "Griffe auf Schulterhöhe",
-    "Nach oben drücken ohne Hohlkreuz",
-    "Kontrolliert zurück"
-   ],
-   "err": "Hohlkreuz",
-   "alt": "Kurzhantel sitzend",
-   "photo": "Machine_Shoulder_Military_Press"
-  },
   "facepull": {
    "name": "Face Pull",
    "cat": "Oberkörper",
-   "equip": "Kabel",
+   "equip": "Kabelzug mit Seil",
    "how": [
     "Seil auf Kopfhöhe",
     "Zum Gesicht ziehen, Ellbogen hoch und aussen",
@@ -1226,19 +1226,6 @@
    "err": "Zu schwer, Ellbogen tief",
    "alt": "Band Pull Apart",
    "photo": "Face_Pull"
-  },
-  "backext": {
-   "name": "Rückenstrecker",
-   "cat": "Rumpf",
-   "equip": "Gerät",
-   "how": [
-    "Hüfte am Polster",
-    "Aus der Hüfte runter und hoch bis Körper gerade",
-    "Nicht überstrecken"
-   ],
-   "err": "Hohlkreuz oben",
-   "alt": "Rückenstrecker Maschine sitzend",
-   "photo": "Hyperextensions_Back_Extensions"
   },
   "cablecrunch": {
    "name": "Kabel Crunch",
@@ -1368,18 +1355,6 @@
    "alt": "Beinpresse",
    "photo": "Barbell_Full_Squat"
   },
-  "crosstrainer": {
-   "name": "Crosstrainer",
-   "cat": "Ausdauer",
-   "equip": "Gerät",
-   "how": [
-    "Aufrecht, Arme aktiv",
-    "Locker, sprechen möglich"
-   ],
-   "err": "Auf den Griffen abstützen",
-   "alt": "Rudern",
-   "photo": "Elliptical_Trainer"
-  },
   "row": {
    "name": "Rudergerät",
    "cat": "Ausdauer",
@@ -1434,7 +1409,7 @@
   "wallball": {
    "name": "Wall Balls",
    "cat": "Hyrox",
-   "equip": "Ball 6 kg",
+   "equip": "Medizinball",
    "how": [
     "Tiefe Kniebeuge, Ball vor der Brust",
     "Explosiv hoch, Ball ans 3 m Ziel",
@@ -1446,7 +1421,7 @@
   "farmers": {
    "name": "Farmers Carry",
    "cat": "Hyrox",
-   "equip": "2 × 24 kg",
+   "equip": "2 Kettlebells (2 × 24 kg)",
    "how": [
     "Aufrecht, Schultern weg von den Ohren",
     "Kurze schnelle Schritte",
@@ -1471,7 +1446,7 @@
   "sblunge": {
    "name": "Sandbag Lunges",
    "cat": "Hyrox",
-   "equip": "Sandsack 20 kg",
+   "equip": "Sandsack Schulter",
    "how": [
     "Sandsack auf den Schultern",
     "Hinteres Knie berührt kurz den Boden",
@@ -1509,7 +1484,7 @@
   "squatmachine": {
    "name": "Squat Maschine",
    "cat": "Beine",
-   "equip": "Gerät",
+   "equip": "gym80 Maschine",
    "how": [
     "Schultern unter den Polstern, Füsse schulterbreit etwas vor dem Körper",
     "Knie zeigen in Richtung Zehen",
@@ -1524,7 +1499,7 @@
   "legpress1": {
    "name": "Beinpresse einbeinig",
    "cat": "Knie",
-   "equip": "Gerät",
+   "equip": "gym80 Maschine",
    "how": [
     "Ein Fuss mittig auf der Platte",
     "Knie bleibt genau über der 2. Zehe",
@@ -1538,7 +1513,7 @@
   "cableabd": {
    "name": "Hüftabduktion am Kabelzug",
    "cat": "Knie",
-   "equip": "Kabel mit Fussschlaufe",
+   "equip": "Kabelzug mit Fussschlaufe",
    "how": [
     "Schlaufe um das äussere Fussgelenk, seitlich zum Kabel stehen",
     "Bein gestreckt seitlich nach aussen führen",
@@ -1560,6 +1535,147 @@
    "err": "Sattel zu tief, das belastet das Knie",
    "alt": "Crosstrainer",
    "photo": "Bicycling_Stationary"
+  },
+  "benchmachine": {
+   "name": "Bankdrücken Maschine liegend",
+   "cat": "Oberkörper",
+   "equip": "gym80 Maschine",
+   "photo": "Barbell_Bench_Press_-_Medium_Grip",
+   "how": [
+    "Flach auf die Bank, Griffe auf Höhe der unteren Brust",
+    "Schulterblätter zusammen und nach unten, Füsse fest am Boden",
+    "Kraftvoll hochdrücken, Ellbogen nicht ganz durchstrecken",
+    "2 Sekunden kontrolliert zurück"
+   ],
+   "err": "Ellbogen 90 Grad zur Seite, Schultern kommen nach vorne",
+   "alt": "Kurzhantel Bankdrücken auf der Bank"
+  },
+  "seatedrow": {
+   "name": "Rudern sitzend Maschine",
+   "cat": "Oberkörper",
+   "equip": "gym80 Maschine",
+   "photo": "Leverage_Iso_Row",
+   "how": [
+    "Brust ans Polster, Sitz so, dass die Griffe auf Brusthöhe sind",
+    "Griffe zum Körper ziehen, Ellbogen nah am Körper",
+    "Schulterblätter am Ende zusammen, kurz halten",
+    "Langsam nach vorne, Schultern bleiben unten"
+   ],
+   "err": "Mit dem Oberkörper Schwung holen",
+   "alt": "Rudern am Kabelturm"
+  },
+  "lateralmachine": {
+   "name": "Seitheben Maschine",
+   "cat": "Oberkörper",
+   "equip": "gym80 Maschine",
+   "photo": "Seated_Side_Lateral_Raise",
+   "how": [
+    "Schulter auf Höhe der Drehachse, Arme an die Polster",
+    "Arme seitlich bis Schulterhöhe heben",
+    "Oben kurz halten, langsam ablassen",
+    "Nacken locker, Schultern nicht hochziehen"
+   ],
+   "err": "Zu schwer, Schultern ziehen zu den Ohren",
+   "alt": "Seitheben mit Kurzhanteln oder am Kabel"
+  },
+  "inclinefly": {
+   "name": "Butterfly schräg",
+   "cat": "Oberkörper",
+   "equip": "gym80 Maschine",
+   "photo": "Incline_Dumbbell_Flyes",
+   "how": [
+    "Rücken ans schräge Polster, Brust raus",
+    "Arme leicht gebeugt, Bogen nach vorne zusammenführen",
+    "Vorne Brust anspannen",
+    "Weit öffnen bis leichte Dehnung, nicht weiter"
+   ],
+   "err": "Arme zu stark beugen, dann wird es ein Drücken",
+   "alt": "Kabel Crossover von unten nach oben"
+  },
+  "reversefly": {
+   "name": "Reverse Butterfly",
+   "cat": "Oberkörper",
+   "equip": "gym80 Maschine",
+   "photo": "Reverse_Machine_Flyes",
+   "how": [
+    "Brust ans schräge Polster",
+    "Arme fast gestreckt nach hinten aussen öffnen",
+    "Schulterblätter zusammen, kurz halten",
+    "Langsam zurück"
+   ],
+   "err": "Mit Schwung arbeiten, zu schwer",
+   "alt": "Face Pull am Kabel"
+  },
+  "szcurl": {
+   "name": "Bizeps Curl mit SZ Stange",
+   "cat": "Oberkörper",
+   "equip": "gym80 Curl Pult",
+   "photo": "Preacher_Curl",
+   "how": [
+    "Oberarme flach aufs Pult, Achseln an die Kante",
+    "SZ Stange im Untergriff hochcurlen",
+    "Oben Bizeps anspannen",
+    "Langsam fast ganz strecken"
+   ],
+   "err": "Arme ruckartig ganz durchstrecken",
+   "alt": "Kurzhantel Curl"
+  },
+  "pushdown": {
+   "name": "Trizepsdrücken am Kabel",
+   "cat": "Oberkörper",
+   "equip": "Kabelzug mit Seil",
+   "photo": "Triceps_Pushdown_-_Rope_Attachment",
+   "how": [
+    "Seil oben am Kabel, Ellbogen fest am Körper",
+    "Seil nach unten drücken und unten auseinanderziehen",
+    "Nur der Unterarm bewegt sich",
+    "Langsam hoch bis ca. 90 Grad"
+   ],
+   "err": "Ellbogen wandern nach vorne",
+   "alt": "Stange statt Seil"
+  },
+  "pullup": {
+   "name": "Klimmzug",
+   "cat": "Oberkörper",
+   "equip": "Klimmzugstange",
+   "photo": "Pullups",
+   "how": [
+    "Etwas breiter als schulterbreit greifen",
+    "Schultern aktiv nach unten, dann Brust zur Stange ziehen",
+    "Kinn über die Stange",
+    "Kontrolliert ganz ablassen"
+   ],
+   "err": "Schwung holen, halbe Wiederholungen",
+   "alt": "Latzug am Turm, oder Klimmzug mit Band"
+  },
+  "dbpress": {
+   "name": "Schulterdrücken Kurzhantel",
+   "cat": "Oberkörper",
+   "equip": "Kurzhanteln und Bank",
+   "photo": "Dumbbell_Shoulder_Press",
+   "how": [
+    "Bank fast senkrecht, Rücken am Polster",
+    "Hanteln auf Schulterhöhe, Handflächen nach vorne",
+    "Nach oben drücken bis Arme fast gestreckt",
+    "Kontrolliert zurück auf Schulterhöhe"
+   ],
+   "err": "Hohlkreuz, Hanteln knallen oben zusammen",
+   "alt": "Am Kabelzug mit verstellbaren Armen"
+  },
+  "rdl": {
+   "name": "Rumänisches Kreuzheben Kurzhantel",
+   "cat": "Beine",
+   "equip": "Kurzhanteln",
+   "photo": "Stiff-Legged_Dumbbell_Deadlift",
+   "how": [
+    "Hüftbreit stehen, Knie leicht gebeugt und fix",
+    "Hüfte nach hinten schieben, Hanteln nah an den Beinen",
+    "Bis Dehnung hinten im Oberschenkel, Rücken gerade",
+    "Hüfte kraftvoll nach vorne, oben Gesäss anspannen"
+   ],
+   "err": "Runder Rücken, Hanteln weit weg vom Körper",
+   "alt": "Mit Langhantel im Rack"
   }
- }
+ },
+ "gym": "gym80 Maschinen, 2 Squat Racks, 2 Bankdrück Bänke, Kabelzüge, Kurzhanteln, Kettlebells, SkiErg, Rudergerät, Velo, Laufband, Sandsäcke, Medizinbälle, Klimmzugstange. Kein Sled."
 }
