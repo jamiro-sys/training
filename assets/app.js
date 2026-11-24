@@ -138,7 +138,7 @@ function renderHeute() {
   if (r && r.src === "check") form = "";
   else if (r) {
     const kv = r.src === "garmin"
-      ? `<div><b class="num">${r.g.hrv ?? "-"}</b><span>HRV ms</span></div><div><b class="num">${r.g.restingHr ?? "-"}</b><span>Ruhepuls</span></div><div><b class="num">${r.g.sleepH ?? "-"}</b><span>Schlaf h</span></div><div><b class="num">${r.g.bodyBattery ?? "-"}</b><span>Body Battery</span></div>`
+      ? `<div><b class="num">${r.g.hrv ?? "-"}</b><span>HRV ms</span></div><div><b class="num">${r.g.restingHr ?? "-"}</b><span>Ruhepuls</span></div><div><b class="num">${r.g.sleepH ?? (sleepFor(iso(addD(now(), -1))) || {}).h ?? "-"}</b><span>Schlaf h</span></div><div><b class="num">${r.g.bodyBattery ?? "-"}</b><span>Body Battery</span></div>`
       : `<div><b class="num">${r.c.sleep}/5</b><span>Schlaf</span></div><div><b class="num">${r.c.energy}/5</b><span>Energie</span></div><div><b class="num">${r.c.sore}/5</b><span>Muskelkater</span></div><div><button class="link" data-checkin="edit">Ändern</button></div>`;
     form = `<div class="card"><div class="card-h"><h3>Tagesform</h3><span class="pill">${r.src === "garmin" ? "Garmin" : "Check in"}</span></div>
       <div class="ring-wrap"><div class="ring">${ring(r.score / 100, scoreCol(r.score))}<div class="v"><div><b>${r.score}</b><span>von 100</span></div></div></div><div class="kv">${kv}</div></div>
@@ -622,7 +622,7 @@ function loadCard() {
 }
 
 /* ---------- Knie Ampel ---------- */
-const RUN_SESS = ["laufRW", "ausdLang", "hx3", "simu", "spiel"];
+const RUN_SESS = ["homeRun", "laufRW", "ausdLang", "hx3", "simu", "spiel"];
 function kneeAdvice() {
   const st = S.settings.kneeStage, max = S.plan.kneeStages.length - 1, since = S.settings.kneeStageSince || "2000-01-01";
   const recent = S.logs.filter(l => l.knee != null && l.date >= iso(addD(now(), -7)));
@@ -631,7 +631,7 @@ function kneeAdvice() {
   const last2 = runs.slice(-2);
   if (st < max && last2.length === 2 && last2.every(l => l.knee <= 2)) return { dir: 1, c: "good", t: `Zwei Läufe mit höchstens 2 von 10. Bereit für Stufe ${st + 1}: ${S.plan.kneeStages[st + 1].name}.` };
   const need = 2 - last2.filter(l => l.knee <= 2).length;
-  return { dir: 0, c: "warn", t: need > 0 ? `Noch ${need} Lauf${need > 1 ? "e" : ""} mit Knie höchstens 2 von 10 auf dieser Stufe, dann geht es weiter.` : "Stufe halten." };
+  return { dir: 0, c: "warn", t: need > 0 ? `Noch ${need} ${need > 1 ? "Läufe" : "Lauf"} mit Knie höchstens 2 von 10 auf dieser Stufe, dann geht es weiter.` : "Stufe halten." };
 }
 function kneeAdviceHtml() {
   const a = kneeAdvice();

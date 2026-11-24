@@ -587,3 +587,5 @@ h1,h2,h3,h4{font-family:var(--f-display);font-weight:700;letter-spacing:-.005em}
 .stretch .st-act{display:flex;flex-direction:column;gap:6px}
 .stretch.done{opacity:.8}
 @media (max-width:420px){.stretch{flex-wrap:wrap}.stretch .st-act{flex-direction:row;width:100%}.stretch .st-act .btn{flex:1}}
+
+.thumb-anim .anim-note,.st-ic .anim-note,.anim-mini .anim-note{display:none}
