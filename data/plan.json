@@ -1,5 +1,5 @@
 {
- "version": 9,
+ "version": 10,
  "updated": "2026-11-24",
  "race": {
   "name": "HYROX Paris Grand Palais",
@@ -21,28 +21,28 @@
    "from": "2026-11-23",
    "to": "2026-12-20",
    "color": "gym",
-   "goal": "Nach Marathon und Saisonende: Fitness ruhig wieder aufbauen, Grundkraft an Geräten, Knie stabilisieren.",
+   "goal": "Gym Mo, Mi, Fr. Di und Do zuhause Ausdauer. Wochenende Freizeit und Mobility. Fitness nach dem Marathon ruhig aufbauen, Knie stabilisieren.",
    "days": [
     [
      "gA"
     ],
     [
-     "rolleZ2"
+     "homeZ2"
     ],
     [
      "gB"
     ],
     [
-     "knie"
-    ],
-    [
-     "laufRW"
+     "homeRun"
     ],
     [
      "gC"
     ],
     [
-     "ruhe"
+     "mob"
+    ],
+    [
+     "mob"
     ]
    ]
   },
@@ -58,22 +58,22 @@
      "gA"
     ],
     [
-     "rolleZ2"
+     "homeZ2"
     ],
     [
      "ruhe"
+    ],
+    [
+     "homeRun"
     ],
     [
      "gB"
     ],
     [
-     "ruhe"
+     "mob"
     ],
     [
-     "laufRW"
-    ],
-    [
-     "ruhe"
+     "mob"
     ]
    ]
   },
@@ -89,22 +89,22 @@
      "gA"
     ],
     [
-     "rolleInt"
+     "homeInt"
     ],
     [
      "gB"
     ],
     [
-     "knie"
-    ],
-    [
-     "laufRW"
+     "homeRun"
     ],
     [
      "hx1"
     ],
     [
-     "ruhe"
+     "mob"
+    ],
+    [
+     "mob"
     ]
    ]
   },
@@ -114,31 +114,32 @@
    "from": "2027-01-18",
    "to": "2027-02-28",
    "color": "football",
-   "goal": "Fussball 3 mal pro Woche. Samstag Kraft und Stationen, Sonntag lange Ausdauer in Zone 2.",
+   "goal": "Fussball Mo, Di, Do. Gym Mo (Oberkörper vor dem Training), Mi Kraft plus Stationen, Fr Hyrox Ausdauer. Wochenende Freizeit und Mobility.",
    "deload": [
     "2027-02-15"
    ],
    "days": [
     [
+     "gB",
      "fb"
     ],
     [
      "fb"
-    ],
-    [
-     "knie"
-    ],
-    [
-     "fb"
-    ],
-    [
-     "ruhe"
     ],
     [
      "hx2"
     ],
     [
-     "ausdLang"
+     "fb"
+    ],
+    [
+     "hx4"
+    ],
+    [
+     "mob"
+    ],
+    [
+     "mob"
     ]
    ]
   },
@@ -154,25 +155,26 @@
    ],
    "days": [
     [
+     "gB",
      "fb"
     ],
     [
      "fb"
-    ],
-    [
-     "knie"
-    ],
-    [
-     "fb"
-    ],
-    [
-     "ruhe"
     ],
     [
      "hx3"
     ],
     [
+     "fb"
+    ],
+    [
      "simu"
+    ],
+    [
+     "mob"
+    ],
+    [
+     "mob"
     ]
    ]
   },
@@ -191,7 +193,7 @@
      "fb"
     ],
     [
-     "knie"
+     "taper"
     ],
     [
      "fb"
@@ -200,10 +202,10 @@
      "ruhe"
     ],
     [
-     "taper"
+     "mob"
     ],
     [
-     "rolleLocker"
+     "mob"
     ]
    ]
   },
@@ -213,7 +215,7 @@
    "from": "2027-04-13",
    "to": "2027-06-30",
    "color": "football",
-   "goal": "Spiele haben Vorrang. Kraft erhalten, Erholung sichern.",
+   "goal": "Spiele haben Vorrang. Mo Kraft erhalten, Mi Oberkörper, Fr nur Mobility vor dem Spiel.",
    "days": [
     [
      "gS"
@@ -222,19 +224,19 @@
      "fb"
     ],
     [
-     "rolleLocker"
+     "gB"
     ],
     [
      "fb"
     ],
     [
-     "knie"
+     "mob"
     ],
     [
      "spiel"
     ],
     [
-     "ruhe"
+     "mob"
     ]
    ]
   }
@@ -1163,6 +1165,287 @@
      ]
     }
    ]
+  },
+  "homeZ2": {
+   "name": "Grundlage zuhause",
+   "tag": "Zuhause",
+   "type": "endurance",
+   "dur": 50,
+   "goal": "Aerobe Basis auf dem Bike, schont das Knie. Rudergerät oder Laufband gehen auch.",
+   "blocks": [
+    {
+     "title": "Ausdauer",
+     "items": [
+      {
+       "ex": "bike",
+       "sets": 1,
+       "reps": "10 Min einrollen, Zone 1"
+      },
+      {
+       "ex": "bike",
+       "sets": 1,
+       "reps": "35 Min Zone 2, Kadenz 85 bis 95"
+      }
+     ]
+    },
+    {
+     "title": "Rumpf mit Kettlebell",
+     "items": [
+      {
+       "ex": "kbaround",
+       "sets": 2,
+       "reps": "5 Runden je Richtung",
+       "rest": 30
+      },
+      {
+       "ex": "sideplank",
+       "sets": 2,
+       "reps": "30 s je Seite",
+       "rest": 30
+      }
+     ]
+    }
+   ],
+   "note": "Abwechslung: einmal pro Woche 20 Min Rudergerät statt Bike, ebenfalls Zone 2."
+  },
+  "homeInt": {
+   "name": "Intervalle zuhause",
+   "tag": "Zuhause",
+   "type": "endurance",
+   "dur": 50,
+   "goal": "Tempohärte für Fussball und Hyrox.",
+   "blocks": [
+    {
+     "title": "Intervalle",
+     "items": [
+      {
+       "ex": "bike",
+       "sets": 1,
+       "reps": "12 Min einrollen mit 3 × 20 s Antritten"
+      },
+      {
+       "ex": "bike",
+       "sets": 5,
+       "reps": "4 Min Zone 4",
+       "rest": 180
+      },
+      {
+       "ex": "bike",
+       "sets": 1,
+       "reps": "5 Min ausrollen"
+      }
+     ]
+    },
+    {
+     "title": "Kettlebell",
+     "items": [
+      {
+       "ex": "kbswing",
+       "sets": 3,
+       "reps": "15",
+       "rest": 60
+      }
+     ]
+    }
+   ],
+   "note": "Alternative: 6 × 500 m Rudergerät in Zone 4, 2 Min Pause."
+  },
+  "homeRun": {
+   "name": "Lauf und Kettlebell",
+   "tag": "Zuhause",
+   "type": "endurance",
+   "dur": 50,
+   "knee": true,
+   "goal": "Laufen nach Knie Stufe, draussen oder Laufband, danach Kettlebell Kraft.",
+   "blocks": [
+    {
+     "title": "Laufen",
+     "items": [
+      {
+       "ex": "treadmill",
+       "sets": 1,
+       "reps": "5 Min zügig gehen"
+      },
+      {
+       "ex": "treadmill",
+       "sets": 1,
+       "reps": "Gemäss Knie Stufe, Zone 2 Pace"
+      }
+     ]
+    },
+    {
+     "title": "Kettlebell Zirkel · 3 Runden",
+     "items": [
+      {
+       "ex": "kbswing",
+       "sets": 3,
+       "reps": "15",
+       "rest": 0
+      },
+      {
+       "ex": "kbgoblet",
+       "sets": 3,
+       "reps": "12",
+       "rest": 0
+      },
+      {
+       "ex": "kbaround",
+       "sets": 3,
+       "reps": "5 Runden je Richtung",
+       "rest": 60
+      }
+     ]
+    }
+   ],
+   "note": "Lauf kurz oder Knie meldet sich? Rest auf dem Bike oder Rudergerät in Zone 2."
+  },
+  "hx4": {
+   "name": "Hyrox Ausdauer",
+   "tag": "Hyrox",
+   "type": "hyrox",
+   "dur": 60,
+   "goal": "Ausdauer mit Stationen statt langer Einheit am Wochenende.",
+   "blocks": [
+    {
+     "title": "Aufwärmen",
+     "items": [
+      {
+       "ex": "gymbike",
+       "sets": 1,
+       "reps": "8 Min locker"
+      }
+     ]
+    },
+    {
+     "title": "4 Runden, 90 s Pause",
+     "items": [
+      {
+       "ex": "row",
+       "sets": 4,
+       "reps": "1000 m Zone 3",
+       "rest": 0
+      },
+      {
+       "ex": "wallball",
+       "sets": 4,
+       "reps": "20",
+       "rest": 0
+      },
+      {
+       "ex": "farmers",
+       "sets": 4,
+       "reps": "60 m",
+       "rest": 0
+      },
+      {
+       "ex": "skierg",
+       "sets": 4,
+       "reps": "500 m",
+       "rest": 90
+      }
+     ]
+    },
+    {
+     "title": "Ausfahren",
+     "items": [
+      {
+       "ex": "gymbike",
+       "sets": 1,
+       "reps": "8 Min Zone 2"
+      }
+     ]
+    }
+   ]
+  },
+  "mob": {
+   "name": "Mobility",
+   "tag": "Wochenende",
+   "type": "rest",
+   "dur": 20,
+   "goal": "Freizeit geniessen, dazu 20 Min beweglich bleiben. Spazieren, Velo oder Wandern zählt als Bonus.",
+   "blocks": [
+    {
+     "title": "Ablauf",
+     "items": [
+      {
+       "ex": "foamroll",
+       "sets": 1,
+       "reps": "je Seite 60 s"
+      },
+      {
+       "ex": "hipflexor",
+       "sets": 1,
+       "reps": "je Seite 45 s"
+      },
+      {
+       "ex": "hamstretch",
+       "sets": 1,
+       "reps": "je Seite 45 s"
+      },
+      {
+       "ex": "calfstretch",
+       "sets": 1,
+       "reps": "je Seite 45 s"
+      },
+      {
+       "ex": "openbook",
+       "sets": 2,
+       "reps": "6 je Seite",
+       "rest": 15
+      },
+      {
+       "ex": "copenhagen",
+       "sets": 2,
+       "reps": "15 s je Seite",
+       "rest": 20
+      },
+      {
+       "ex": "childpose",
+       "sets": 1,
+       "reps": "60 s"
+      }
+     ]
+    }
+   ]
+  },
+  "dehnen": {
+   "name": "Dehnen 10 Minuten",
+   "tag": "Dehnen",
+   "type": "rest",
+   "dur": 10,
+   "goal": "Kurze Routine für jeden Tag, ideal am Abend oder nach dem Training.",
+   "blocks": [
+    {
+     "title": "Ablauf",
+     "items": [
+      {
+       "ex": "hipflexor",
+       "sets": 1,
+       "reps": "je Seite 45 s"
+      },
+      {
+       "ex": "hamstretch",
+       "sets": 1,
+       "reps": "je Seite 45 s"
+      },
+      {
+       "ex": "calfstretch",
+       "sets": 1,
+       "reps": "je Seite 45 s"
+      },
+      {
+       "ex": "openbook",
+       "sets": 1,
+       "reps": "6 je Seite"
+      },
+      {
+       "ex": "childpose",
+       "sets": 1,
+       "reps": "60 s"
+      }
+     ]
+    }
+   ]
   }
  },
  "exercises": {
@@ -1812,6 +2095,91 @@
    ],
    "err": "Hohlkreuz, Oberkörper dreht mit",
    "alt": "Pallof Press"
+  },
+  "kbswing": {
+   "name": "Kettlebell Swing",
+   "cat": "Hyrox",
+   "equip": "Kettlebell",
+   "fav": true,
+   "yt": "Kettlebell Swing Technik",
+   "how": [
+    "Füsse etwas breiter als hüftbreit, Kettlebell vor dir",
+    "Hüfte nach hinten schieben, Kettlebell zwischen die Beine",
+    "Hüfte explosiv nach vorne, Arme sind nur Seile",
+    "Kettlebell schwingt bis Brusthöhe, Rücken bleibt gerade"
+   ],
+   "err": "Aus den Armen heben oder in die Knie gehen statt Hüfte",
+   "alt": "Rumänisches Kreuzheben"
+  },
+  "kbgoblet": {
+   "name": "Goblet Squat Kettlebell",
+   "cat": "Beine",
+   "equip": "Kettlebell",
+   "yt": "Goblet Squat Kettlebell",
+   "how": [
+    "Kettlebell an den Hörnern vor der Brust",
+    "Füsse schulterbreit, Zehen leicht nach aussen",
+    "Tief in die Hocke, Ellbogen zwischen die Knie",
+    "Über die ganze Fusssohle hochdrücken"
+   ],
+   "err": "Rundrücken unten, Fersen heben ab",
+   "alt": "Squat Maschine"
+  },
+  "hamstretch": {
+   "name": "Dehnung hinterer Oberschenkel",
+   "cat": "Mobility",
+   "equip": "Matte, Band oder Handtuch",
+   "yt": "Hamstring Dehnung liegend Band",
+   "how": [
+    "Rückenlage, Band um den Fuss",
+    "Bein gestreckt nach oben ziehen bis Zug hinten",
+    "Anderes Bein bleibt am Boden",
+    "Ruhig atmen, je Seite 45 s"
+   ],
+   "err": "Becken hebt ab, Knie stark gebeugt",
+   "alt": "Stehend mit Fuss auf Erhöhung"
+  },
+  "calfstretch": {
+   "name": "Wadendehnung an der Wand",
+   "cat": "Mobility",
+   "equip": "Wand",
+   "yt": "Wadendehnung Wand",
+   "how": [
+    "Hände an der Wand, ein Bein weit hinten",
+    "Hintere Ferse bleibt am Boden, Bein gestreckt",
+    "Hüfte nach vorne schieben",
+    "Je Seite 45 s, danach mit gebeugtem Knie"
+   ],
+   "err": "Ferse hebt ab",
+   "alt": "Auf der Treppenstufe"
+  },
+  "openbook": {
+   "name": "Open Book Brustwirbelsäule",
+   "cat": "Mobility",
+   "equip": "Matte",
+   "yt": "Open Book Übung",
+   "how": [
+    "Seitlage, Knie 90 Grad vor dem Körper",
+    "Arme gestreckt nach vorne, Handflächen aufeinander",
+    "Oberen Arm in einem Bogen nach hinten öffnen, Blick folgt",
+    "Knie bleiben zusammen am Boden"
+   ],
+   "err": "Knie heben ab, zu schnell",
+   "alt": "Rotation im Vierfüsslerstand"
+  },
+  "childpose": {
+   "name": "Kindhaltung",
+   "cat": "Mobility",
+   "equip": "Matte",
+   "yt": "Kindhaltung Child Pose",
+   "how": [
+    "Kniestand, Gesäss Richtung Fersen",
+    "Oberkörper nach vorne ablegen, Arme lang",
+    "Tief in den Bauch atmen",
+    "60 s halten"
+   ],
+   "err": "Schultern hochziehen",
+   "alt": "Katze Kuh"
   }
  },
  "gym": "gym80 Maschinen, 2 Squat Racks, 2 Bankdrück Bänke, Kabelzüge, Kurzhanteln, Kettlebells, SkiErg, Rudergerät, Velo, Laufband, Sandsäcke, Medizinbälle, Klimmzugstange. Kein Sled."

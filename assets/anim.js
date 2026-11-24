@@ -195,6 +195,18 @@ Object.assign(A, {
 A.facepull = { frames: [{ at: "hip", x: 90, y: 158, T: -8, L1: [86, 92], A1: [105, 100], F1: -80 }, { at: "hip", x: 90, y: 158, T: -8, L1: [86, 92], A1: [168, 60], F1: -80 }],
   scene: `<path d="M226 8 V168" class="pr"/><circle cx="226" cy="104" r="4" class="pr"/>`, props: [{ k: "cable", on: "hand1", from: [226, 104] }, { k: "grip", on: "hand1" }] };
 
+
+/* ---------- Zuhause und Mobility ---------- */
+Object.assign(A, {
+  kbswing: { frames: [{ at: "ankle", x: 112, y: 164, T: 72, L1: [-18, 14], A1: [-25, -20] }, { at: "ankle", x: 112, y: 164, T: -4, L1: [0, 0], A1: [92, 92] }], props: [{ k: "kb", on: "hand1" }] },
+  kbgoblet: { frames: [{ at: "ankle", x: 120, y: 164, T: 4, L1: [0, 0], A1: [20, 165] }, { at: "ankle", x: 120, y: 164, T: 26, L1: [86, -36], A1: [40, 175] }], props: [{ k: "kb", on: "hand1" }] },
+  hamstretch: { frames: [{ at: "hip", x: 120, y: 158, T: -90, L1: [150, 150], L2: [90, 90], A1: [120, 150], F1: -60 }, { at: "hip", x: 120, y: 158, T: -90, L1: [172, 172], L2: [90, 90], A1: [145, 175], F1: -80 }], note: "Rückenlage" },
+  calfstretch: { frames: [{ at: "hip", x: 108, y: 90, T: 18, L1: [22, -8], L2: [-24, -24], A1: [78, 80] }, { at: "hip", x: 114, y: 92, T: 24, L1: [28, -12], L2: [-30, -30], A1: [74, 76] }],
+    scene: `<path d="M178 20 V168" class="pr" style="stroke-width:6"/>` },
+  openbook: { frames: [{ at: "hip", x: 122, y: 152, T: -90, L1: [60, -100], L2: [60, -100], A1: [0, 0], A2: [0, 0] }, { at: "hip", x: 122, y: 152, T: -90, L1: [60, -100], L2: [60, -100], A1: [175, 178], A2: [0, 0] }], note: "Seitlage" },
+  childpose: { frames: [{ at: "knee", x: 128, y: 160, T: 112, L1: [62, -90], A1: [96, 96], F1: 180 }, { at: "knee", x: 128, y: 160, T: 104, L1: [58, -90], A1: [100, 100], F1: 180 }] }
+});
+
 /* ---------- Zeichnen ---------- */
 function crankPose(a, t) {
   const th = t * Math.PI * 2;

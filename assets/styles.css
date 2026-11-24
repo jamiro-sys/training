@@ -577,3 +577,13 @@ h1,h2,h3,h4{font-family:var(--f-display);font-weight:700;letter-spacing:-.005em}
 .thumb-anim{display:inline-block;width:52px;height:40px;border-radius:12px;background:var(--surface-2);border:2px solid var(--surface);margin-right:-10px;overflow:hidden}
 .thumb-anim svg{width:100%;height:100%}
 .thumbs .thumb-anim:nth-child(1){--c:var(--accent)}
+/* Dehnen */
+.stretch{display:flex;align-items:center;gap:14px;background:linear-gradient(120deg,color-mix(in srgb,var(--sleep) 14%,var(--surface)),var(--surface) 65%)}
+.stretch .st-ic{width:64px;height:48px;border-radius:12px;background:var(--surface-2);overflow:hidden;flex:none;--c:var(--sleep)}
+.stretch .st-ic .anim-mini,.stretch .st-ic svg{display:block;width:100%;height:100%}
+.stretch .st-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.stretch .st-tx b{font:800 19px/1.15 var(--f-display);text-transform:uppercase;letter-spacing:.01em}
+.stretch .st-tx .muted{font-size:12.5px}
+.stretch .st-act{display:flex;flex-direction:column;gap:6px}
+.stretch.done{opacity:.8}
+@media (max-width:420px){.stretch{flex-wrap:wrap}.stretch .st-act{flex-direction:row;width:100%}.stretch .st-act .btn{flex:1}}

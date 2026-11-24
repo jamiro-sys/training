@@ -78,6 +78,7 @@ function toast(t) { const el = $("#toast"); el.textContent = t; el.hidden = fals
 const greeting = () => { const h = new Date().getHours(); return h < 11 ? "Guten Morgen" : h < 17 ? "Hallo" : "Guten Abend"; };
 const kneeColor = v => v == null ? "var(--rest)" : v <= 2 ? "var(--good)" : v <= 4 ? "var(--warn)" : "var(--bad)";
 
+const EASY = ["dehnen", "mob", "knie"];
 /* ---------- Kraftwerte, Rekorde, Tagesform ---------- */
 const num = v => { const n = parseFloat(String(v ?? "").replace(",", ".")); return Number.isFinite(n) ? n : 0; };
 const e1rm = (w, r) => w > 0 && r > 0 ? w * (1 + Math.min(r, 15) / 30) : 0;
@@ -155,7 +156,7 @@ function renderHeute() {
     const dots = ks.filter(k => sess(k).dur || k === "race").map(k => `<i class="t-${sess(k).type}${isDone(iso(d), k) ? " done" : ""}"></i>`).join("");
     return `<button class="${iso(d) === iso(t) ? "today" : ""}" data-day="${iso(d)}" aria-label="${DL[i]} ${fmt(d)}"><span class="d">${dn}</span><span class="n">${d.getDate()}</span><span class="dots">${dots}</span></button>`;
   }).join("");
-  const weekDone = S.logs.filter(l => l.date >= iso(ws) && l.date <= iso(addD(ws, 6))).length;
+  const weekDone = S.logs.filter(l => l.date >= iso(ws) && l.date <= iso(addD(ws, 6)) && !EASY.includes(l.session)).length;
   const weekPlan = DN.reduce((a, _, i) => a + sessionsFor(addD(ws, i)).filter(k => sess(k).dur && sess(k).type !== "rest").length, 0);
   const coach = S.coach && S.coach.message ? `<div class="card span coach-card"><div class="coach"><div class="av" aria-hidden="true"></div><div><p class="eyebrow" style="margin-bottom:6px">Coach · ${esc(S.coach.updated ? fmt(new Date(S.coach.updated)) : "")}</p><p>${esc(S.coach.message)}</p></div></div></div>` : "";
   const ks = S.plan.kneeStages[S.settings.kneeStage];
@@ -565,13 +566,15 @@ function finishPlayer() {
   if (recs.length) buzz([60, 40, 60, 40, 120]);
   openSheet(`${recs.length ? `<div class="pr-banner"><span class="eyebrow">Neuer Bestwert</span>${recs.map(r => `<b>${esc(S.plan.exercises[r.ex].name)} · ${fmtKg(r.w)} kg × ${r.r}</b>`).join("")}</div>` : ""}<div><p class="eyebrow">Geschafft</p><h2 id="sheetTitle" style="margin-top:8px">${esc(s.name)}</h2></div>
     <div class="stats" style="margin:0"><div class="stat"><b class="num">${mins}</b><span>Minuten</span></div><div class="stat"><b class="num">${doneSets}</b><span>Sätze</span></div><div class="stat"><b class="num">${kg ? Math.round(kg).toLocaleString("de-CH") : "-"}</b><span>kg bewegt</span></div></div>
-    ${finishFields()}<button class="btn accent block" id="fSave">Speichern</button>`);
+    ${EASY.includes(P.k) ? "" : finishFields()}<button class="btn accent block" id="fSave">Speichern</button>${EASY.includes(P.k) || isDone(iso(now()), "dehnen") ? "" : `<button class="btn ghost block" id="fSaveStretch">Speichern und 10 Min dehnen</button>`}`);
   bindScales();
+  const fs2 = $("#fSaveStretch"); if (fs2) fs2.addEventListener("click", () => { $("#fSave").click(); setTimeout(() => startPlayer("dehnen", iso(now())), 300); });
   $("#fSave").addEventListener("click", () => {
     const sets = {};
     P.steps.forEach((st, i) => { if (st.ex && P.sets[i] && isStrength(st)) { const v = P.sets[i].filter(x => x.d && (x.w || x.r)).map(x => ({ w: x.w, r: x.r || targetReps(st) })); if (v.length) sets[st.ex] = (sets[st.ex] || []).concat(v); } });
-    S.logs.push({ id: uid(), date: P.date, session: P.k, dur: mins, ...readFinish(), sets, ts: new Date().toISOString() });
-    saveLogs(); clearPlayer(); closeSheet(); renderAll(); toast("Training gespeichert");
+    const fin = EASY.includes(P.k) ? { rpe: 1, knee: null, note: "" } : readFinish();
+    S.logs.push({ id: uid(), date: P.date, session: P.k, dur: mins, ...fin, sets, ts: new Date().toISOString() });
+    saveLogs(); clearPlayer(); closeSheet(); renderAll(); toast(P.k === "dehnen" ? "Dehnen erledigt" : "Training gespeichert");
   });
 }
 
@@ -785,6 +788,7 @@ function icsExport() {
       L.push("BEGIN:VEVENT", `UID:${iso(d)}-${k}@paris27`, `DTSTAMP:${stamp}`, `DTSTART;TZID=${tz}:${dt(d, fb ? S.settings.timeFb : S.settings.timeTrain)}`, `DURATION:PT${s.dur}M`, `SUMMARY:${s.tag}: ${s.name}`, `DESCRIPTION:${s.goal.replace(/[,;]/g, " ")}`, "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${s.name}`, `TRIGGER:-PT${fb ? 90 : 60}M`, "END:VALARM", "END:VEVENT");
     });
   }
+  if (S.settings.stretchOn !== false) L.push("BEGIN:VEVENT", "UID:dehnen@paris27", `DTSTAMP:${stamp}`, `DTSTART;TZID=${tz}:${dt(now(), S.settings.stretchTime || "21:00")}`, "DURATION:PT10M", "RRULE:FREQ=DAILY", "SUMMARY:Dehnen 10 Min", "DESCRIPTION:Hüftbeuger, Beinrückseite, Waden, Open Book, Kindhaltung", "BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:Zeit zum Dehnen", "TRIGGER:PT0M", "END:VALARM", "END:VEVENT");
   supps().filter(x => x.time).forEach(x => L.push("BEGIN:VEVENT", `UID:supp-${x.id}@paris27`, `DTSTAMP:${stamp}`, `DTSTART;TZID=${tz}:${dt(now(), x.time)}`, "DURATION:PT5M", "RRULE:FREQ=DAILY", `SUMMARY:${x.name}${x.dose ? " " + x.dose : ""}`, "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${x.name}`, "TRIGGER:PT0M", "END:VALARM", "END:VEVENT"));
   const nb = benchLast() ? addD(pd(benchLast()), 42) : addD(now(), 4);
   L.push("BEGIN:VEVENT", `UID:bench-${iso(nb)}@paris27`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${iso(nb).replace(/-/g, "")}`, "SUMMARY:Benchmark Tests fällig", "END:VEVENT", "END:VCALENDAR");
@@ -850,6 +854,7 @@ function settingsExtras() {
   const st = S.settings;
   return `<div><p class="block-t">Kalender und Erinnerungen</p><div class="row"><div class="field" style="flex:1"><label for="tTrain">Training um</label><input class="input" type="time" id="tTrain" value="${st.timeTrain || "18:00"}"></div><div class="field" style="flex:1"><label for="tFb">Fussball um</label><input class="input" type="time" id="tFb" value="${st.timeFb || "19:30"}"></div></div>
     <button class="btn primary block" data-ics style="margin-top:10px">Kalender exportieren</button><p class="muted" style="font-size:12.5px;margin-top:6px">Alle Trainings bis Paris, mit Erinnerung vorher, dazu deine Supplements täglich. Auf dem iPhone die Datei öffnen und «Alle hinzufügen» wählen. Ändert sich der Plan, nochmals exportieren.</p></div>
+    <div><p class="block-t">Dehnen</p><div class="row" style="align-items:center"><label class="muted" for="stTime" style="font-size:13px">Erinnerung um</label><input class="input" type="time" id="stTime" value="${st.stretchTime || "21:00"}" style="flex:1"><button class="btn ghost small" data-stretchtoggle>${st.stretchOn === false ? "Einschalten" : "Ausschalten"}</button></div><p class="muted" style="font-size:12.5px;margin-top:6px">Die Erinnerung kommt über den Kalender. Nach Änderung den Kalender nochmals exportieren.</p></div>
     <div><p class="block-t">Supplements</p><button class="btn ghost block" data-open="supps">${supps().length ? supps().length + " eingetragen · Bearbeiten" : "Einrichten"}</button></div>
     <div><p class="block-t">Sync über GitHub</p>
       <div class="field"><label for="ghRepo">Privates Repository</label><input class="input" id="ghRepo" value="${esc(st.ghRepo || "jamiro-sys/training-data")}" autocomplete="off"></div>
@@ -858,12 +863,24 @@ function settingsExtras() {
       <p class="muted" style="font-size:12.5px;margin-top:6px">${st.lastSync ? "Zuletzt " + new Date(st.lastSync).toLocaleString("de-CH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) + ". " : ""}${st.syncErr ? `<span style="color:var(--bad)">${esc(st.syncErr)}.</span> ` : ""}Der Schlüssel öffnet dein privates Repository: Die App liest dort Garmin Daten und Coach Notiz und sichert Logbuch, Gewicht, Tests und Supplements in logbuch.json. Fotos bleiben auf dem Gerät. Der Schlüssel bleibt nur in diesem Browser.</p></div>`;
 }
 
+/* ---------- Dehnen Erinnerung ---------- */
+function stretchCard() {
+  if (S.settings.stretchOn === false) return "";
+  const t = iso(now()), done = isDone(t, "dehnen") || isDone(t, "mob");
+  let streak = 0; for (let i = done ? 0 : 1; i < 365; i++) { const d = iso(addD(now(), -i)); if (isDone(d, "dehnen") || isDone(d, "mob")) streak++; else break; }
+  const time = S.settings.stretchTime || "21:00";
+  return `<div class="card span stretch${done ? " done" : ""}"><div class="st-ic" aria-hidden="true"><span class="anim-mini" data-anim="childpose" data-still></span></div>
+    <div class="st-tx"><span class="eyebrow">Dehnen · Erinnerung ${esc(time)} Uhr</span><b>${done ? "Heute erledigt" : "10 Minuten dehnen"}</b><span class="muted">${streak ? streak + " Tage am Stück" : "Hüfte, Beinrückseite, Waden, Rücken"}</span></div>
+    ${done ? `<span class="pill good">${ICON.check.replace("<svg", '<svg style="width:14px;height:14px"')}</span>` : `<div class="st-act"><button class="btn accent small" data-start="dehnen" data-date="${t}">${ICON.play} Start</button><button class="btn ghost small" data-stretchdone>Erledigt</button></div>`}</div>`;
+}
+
 /* ---------- Karten auf Heute ---------- */
 function heuteExtras(main) {
   const t = now(), out = [];
   if (wd(t) === 6 || wd(t) === 0) { const ws = wd(t) === 6 ? monday(t) : monday(addD(t, -1)); out.push(`<button class="card span review-cta" data-review="${iso(ws)}"><span class="eyebrow">Wochenrückblick</span><b>KW ${kw(ws)} ansehen</b><span class="muted">Einheiten, Bestwerte, Knie und was nächste Woche kommt</span></button>`); }
   if (benchDue() && iso(t) >= "2026-11-28") out.push(`<div class="card span bench-due"><div><span class="eyebrow">Benchmark fällig</span><b>${benchLast() ? "6 Wochen seit dem letzten Test" : "Erster Test: deine Ausgangswerte"}</b><span class="muted">SkiErg, Rudern, Wall Balls${S.settings.kneeStage >= 4 ? " und 1 km Lauf" : ""}. Ersetzt die Gym Einheit am Samstag.</span></div><button class="btn accent small" data-bench="new">Eintragen</button></div>`);
   const L = loadStats(); if (L.st.lvl >= 2) out.push(`<div class="card span"><div class="amp"><div class="lights"><i class="${L.st.c === "warn" ? "on y" : ""}"></i><i class="${L.st.c === "bad" ? "on r" : ""}"></i></div><div><b>${esc(L.st.t)}</b><p class="muted" style="font-size:13px">${esc(L.st.a)}</p></div></div></div>`);
+  out.push(stretchCard());
   out.push(suppCard());
   return out.join("");
 }
@@ -1024,7 +1041,7 @@ document.addEventListener("click", e => {
   const c = { sleep: pick("sleep"), energy: pick("energy"), sore: pick("sore") };
   if (c.sleep && c.energy && c.sore) { S.checkins[iso(now())] = c; saveKey("checkins", S.checkins); setTimeout(renderHeute, 250); toast("Tagesform gespeichert"); }
 });
-document.addEventListener("change", e => { if (e.target.id === "hxRange") renderPlan(); });
+document.addEventListener("change", e => { if (e.target.id === "hxRange") renderPlan(); if (e.target.id === "stTime" && e.target.value) { S.settings.stretchTime = e.target.value; saveSettings(); renderHeute(); toast("Dehnen um " + e.target.value + " Uhr"); } });
 document.addEventListener("submit", e => {
   if (e.target.id !== "bodyForm") return; e.preventDefault();
   const kg = num($("#bodyKg").value), waist = num($("#bodyWaist").value);
@@ -1066,6 +1083,7 @@ document.addEventListener("click", async e => {
   const q = sel => e.target.closest(sel);
   let b;
   if ((b = q("[data-dial]"))) return dialSheet(b.dataset.dial);
+  if (q("[data-stretchdone]")) { S.logs.push({ id: uid(), date: iso(now()), session: "dehnen", dur: 10, rpe: 1, ts: new Date().toISOString() }); saveLogs(); renderAll(); return toast("Dehnen erledigt"); }
   if (q("[data-zones]")) { openSheet(`<h2 id="sheetTitle">Pulszonen</h2>${zonesCard()}`); return; }
   if ((b = q("[data-kneeset]"))) { setKnee(+b.dataset.kneeset); renderAll(); return toast("Knie Stufe " + S.settings.kneeStage); }
   if ((b = q("[data-review]"))) return reviewSheet(pd(b.dataset.review));
@@ -1103,7 +1121,8 @@ document.addEventListener("click", async e => {
   }
   if ((b = q("[data-suppdel]"))) { S.settings.supps = supps().filter(x => x.id !== b.dataset.suppdel); saveSettings(); scheduleSync(); suppSheet(); return renderHeute(); }
   if ((b = q("[data-suppadd]"))) { const [name, dose, time] = b.dataset.suppadd.split("|"); S.settings.supps = supps().concat({ id: uid(), name, dose, time }); saveSettings(); scheduleSync(); suppSheet(); return renderHeute(); }
-  if (q("[data-ics]")) { S.settings.timeTrain = $("#tTrain").value || "18:00"; S.settings.timeFb = $("#tFb").value || "19:30"; saveSettings(); return icsExport(); }
+  if (q("[data-stretchtoggle]")) { S.settings.stretchOn = S.settings.stretchOn === false; saveSettings(); renderAll(); return settingsSheet(); }
+  if (q("[data-ics]")) { S.settings.stretchTime = ($("#stTime") && $("#stTime").value) || S.settings.stretchTime || "21:00"; S.settings.timeTrain = $("#tTrain").value || "18:00"; S.settings.timeFb = $("#tFb").value || "19:30"; saveSettings(); return icsExport(); }
   if ((b = q("[data-sync]"))) {
     if (b.dataset.sync === "off") { S.settings.ghToken = ""; S.settings.lastSync = ""; saveSettings(); settingsSheet(); return toast("Sync getrennt"); }
     S.settings.ghRepo = ($("#ghRepo").value.trim() || "jamiro-sys/training-data").replace(/^https:\/\/github\.com\//, "").replace(/\/$/, ""); S.settings.ghToken = $("#ghToken").value.trim(); saveSettings();
