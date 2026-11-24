@@ -44,10 +44,11 @@ const S = {
   logs: store.get("logs", []),
   body: store.get("body", []),
   checkins: store.get("checkins", {}),
+  bench: store.get("bench", []), sims: store.get("sims", []), suppLog: store.get("suppLog", {}), deleted: store.get("deleted", []),
   settings: Object.assign({ kneeStage: 1, raceDate: null, theme: "system", targetMin: 80 }, store.get("settings", {})),
   week: monday(now()), planMode: "woche", exCat: "Alle", exQ: ""
 };
-const saveLogs = () => store.set("logs", S.logs);
+const saveLogs = () => { store.set("logs", S.logs); scheduleSync(); };
 const saveSettings = () => store.set("settings", S.settings);
 const raceDate = () => S.settings.raceDate || S.plan.race.date;
 
@@ -176,7 +177,8 @@ function renderHeute() {
           <div><b>${esc(TYPE[s.type])}</b><span>Typ</span></div>
         </div>
         <div class="actions">
-          ${s.blocks.length && s.dur && !pend ? `<button class="btn ${done ? "ghost" : "accent"} grow" data-start="${main}" data-date="${iso(t)}">${ICON.play} ${done ? "Nochmals" : "Training starten"}</button>` : ""}
+          ${s.type === "football" ? `<button class="btn ${done ? "ghost" : "accent"} grow" data-quicklog="${main}" data-date="${iso(t)}">${done ? "Nochmals eintragen" : main === "spiel" ? "Spiel eintragen" : "Fussball eintragen"}</button>${!pend ? `<button class="btn ghost" data-start="${main}" data-date="${iso(t)}">${ICON.play} Aktivierung</button>` : ""}`
+            : s.blocks.length && s.dur && !pend ? `<button class="btn ${done ? "ghost" : "accent"} grow" data-start="${main}" data-date="${iso(t)}">${ICON.play} ${done ? "Nochmals" : "Training starten"}</button>` : ""}
           <button class="btn ghost" data-sess="${main}" data-date="${iso(t)}">Details</button>
         </div>
         ${nextK ? `<button class="next-up" data-sess="${nextK}" data-date="${iso(nextD)}"><span class="eyebrow">Nächstes Training</span><b>${days(t, nextD) === 1 ? "Morgen" : DL[wd(nextD)]} · ${esc(sess(nextK).name)}</b><span class="muted">${esc(sess(nextK).tag)} · ${sess(nextK).dur} Min</span></button>` : ""}
@@ -190,13 +192,14 @@ function renderHeute() {
         </div>
       </div>
       ${coach}
+      ${heuteExtras(main)}
       <div class="card span"><div class="card-h"><h3>Diese Woche</h3><span class="muted num" style="font-size:13px">${weekDone} / ${weekPlan}${isDeload(t) ? " · Entlastung" : ""}</span></div>
         <div class="progress" style="margin:-4px 0 14px"><span style="width:${Math.min(100, weekPlan ? weekDone / weekPlan * 100 : 0)}%;background:var(--accent)"></span></div><div class="strip">${strip}</div></div>
       <div class="card span"><div class="card-h"><h3>Knie Stufe</h3><button class="btn ghost small" data-open="knee">Alle Stufen</button></div>
         <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
           <div class="stepper"><button class="icon-btn" data-knee="-1" aria-label="Stufe runter">${ICON.minus}</button><b class="num">${S.settings.kneeStage}</b><button class="icon-btn" data-knee="1" aria-label="Stufe rauf">${ICON.plus}</button></div>
           <div style="min-width:0;flex:1"><b>${esc(ks.name)}</b><p class="muted">${esc(ks.text)}</p></div>
-        </div></div>
+        </div>${kneeAdviceHtml()}</div>
     </div>`;
 }
 
@@ -241,7 +244,7 @@ function parisCalc() {
   const pace = 300 * k, runT = 8 * pace, stT = HX.filter(x => !x[2]).reduce((a, x) => a + x[1] * k, 0);
   let acc = 0;
   const rows = HX.map(([n, sec, run], i) => { acc += sec * k + HX_ROX * k / 16; return `<div class="split${run ? " run" : ""}"><span class="no num">${run ? "R" + (i / 2 + 1) : "S" + Math.ceil(i / 2)}</span><span class="tx">${esc(n)}${run ? " 1 km" : ""}</span><span class="num">${hms(sec * k)}</span><span class="num muted">${hms(acc)}</span></div>`; }).join("");
-  return `<div class="card hx"><p class="eyebrow">Zielzeit Doubles</p><div class="hx-t"><b class="big-num num" id="hxOut">${hms(target)}</b></div>
+  return `${simCard()}<div class="card hx" style="margin-top:14px"><p class="eyebrow">Zielzeit Doubles</p><div class="hx-t"><b class="big-num num" id="hxOut">${hms(target)}</b></div>
     <input type="range" id="hxRange" min="60" max="110" step="1" value="${S.settings.targetMin}" aria-label="Zielzeit in Minuten">
     <div class="kv" style="margin-top:14px"><div><b class="num">${hms(pace)}</b><span>Pace pro km</span></div><div><b class="num">${hms(runT)}</b><span>8 km Laufen</span></div><div><b class="num">${hms(stT)}</b><span>Stationen</span></div><div><b class="num">${hms(HX_ROX * k)}</b><span>Roxzone Wechsel</span></div></div></div>
     <div class="card" style="margin-top:14px"><div class="card-h"><h3>Splits</h3><span class="muted" style="font-size:12px">Zeit · kumuliert</span></div><div class="splits">${rows}</div>
@@ -311,13 +314,14 @@ function renderFortschritt() {
   const acts = ((S.garmin && S.garmin.activities) || []).slice(0, 8);
   // Körpergewicht
   const B = S.body.slice().sort((a, b) => a.date.localeCompare(b.date));
-  const bPts = B.slice(-30).map(x => ({ v: x.kg, l: fmt(pd(x.date)) }));
-  const bLast = B[B.length - 1], b4 = B.filter(x => x.date <= iso(addD(t, -28))).pop();
+  const BK = B.filter(x => x.kg), bPts = BK.slice(-30).map(x => ({ v: x.kg, l: fmt(pd(x.date)) }));
+  const bLast = BK[BK.length - 1], b4 = BK.filter(x => x.date <= iso(addD(t, -28))).pop();
   const bDelta = bLast && b4 ? bLast.kg - b4.kg : null;
   const bvs = bPts.map(x => x.v);
   const bodyCard = `<div class="card chart"><div class="card-h"><h3>Körpergewicht</h3><span class="num muted">${bLast ? fmtKg(bLast.kg) + " kg" : ""}${bDelta != null ? ` <span style="color:${bDelta <= 0 ? "var(--good)" : "var(--warn)"}">${bDelta > 0 ? "+" : ""}${fmtKg(bDelta)}</span>` : ""}</span></div>
     ${bPts.length >= 2 ? lineChart(bPts, { min: Math.floor(Math.min(...bvs) - 1), max: Math.ceil(Math.max(...bvs) + 1), color: "var(--endurance)", label: "Körpergewicht", unit: " kg" }) : `<p class="muted">Wiege dich 1 bis 2 Mal pro Woche morgens nüchtern. Ab zwei Werten erscheint der Verlauf.</p>`}
-    <form class="row" id="bodyForm" style="margin-top:12px"><input class="input num" id="bodyKg" inputmode="decimal" placeholder="z.B. 78,4" aria-label="Gewicht in kg" style="flex:1"><button class="btn primary small" type="submit">Eintragen</button></form></div>`;
+    ${(() => { const wv = B.filter(x => x.waist).slice(-1)[0], w0 = B.filter(x => x.waist)[0]; return wv ? `<p class="muted" style="font-size:13px;margin-top:8px">Bauchumfang ${fmtKg(wv.waist)} cm${w0 && w0 !== wv ? ` · seit Start ${wv.waist - w0.waist > 0 ? "+" : ""}${fmtKg(wv.waist - w0.waist)} cm` : ""}</p>` : ""; })()}
+    <form class="row" id="bodyForm" style="margin-top:12px"><input class="input num" id="bodyKg" inputmode="decimal" placeholder="kg" aria-label="Gewicht in kg" style="flex:1;min-width:100px"><input class="input num" id="bodyWaist" inputmode="decimal" placeholder="Bauch cm" aria-label="Bauchumfang in cm auf Höhe Bauchnabel" style="flex:1;min-width:100px"><button class="btn primary small" type="submit">Eintragen</button></form></div>`;
   // Heatmap 12 Wochen
   const hmStart = addD(ws, -77); let hm = "";
   for (let w = 0; w < 12; w++) { hm += `<div class="hm-col">`; for (let d = 0; d < 7; d++) { const day = addD(hmStart, w * 7 + d), ds = iso(day); const m = S.logs.filter(l => l.date === ds).reduce((a, l) => a + (l.dur || 30), 0); const lv = day > t ? -1 : m === 0 ? 0 : m < 40 ? 1 : m < 75 ? 2 : 3; hm += `<i class="l${lv}" title="${fmt(day)}${m ? " · " + m + " Min" : ""}"></i>`; } hm += `</div>`; }
@@ -328,12 +332,16 @@ function renderFortschritt() {
       <div style="display:flex;gap:6px;align-items:center">${l.knee != null ? `<span class="kb" style="--c:${kneeColor(l.knee)}" title="Knie">K ${l.knee}</span>` : ""}<button class="icon-btn" style="width:32px;height:32px" data-del="${esc(l.id)}" aria-label="Eintrag löschen">${ICON.close}</button></div></div>`; }).join("");
 
   $("#v-fortschritt").innerHTML = `<header class="head"><div><p class="eyebrow">Logbuch und Garmin</p><h1>Fortschritt</h1></div>
-    <button class="btn ghost small" data-open="log">${ICON.plus} Eintrag</button></header>
+    <div class="row"><button class="btn ghost small" data-review="${iso(wd(t) >= 5 ? ws : addD(ws, -7))}">Rückblick</button><button class="btn ghost small" data-open="log">${ICON.plus} Eintrag</button></div></header>
     <div class="stats"><div class="stat"><b class="num">${thisWeek}</b><span>Einheiten diese Woche</span></div><div class="stat"><b class="num">${minutes}</b><span>Minuten in 4 Wochen</span></div><div class="stat"><b class="num">${streak}</b><span>Wochen in Folge mit 4+</span></div></div>
     <div class="cols">
       <div class="card chart"><div class="card-h"><h3>Einheiten pro Woche</h3><span class="muted" style="font-size:12px">Ziel 5</span></div>${bars}</div>
       <div class="card chart"><div class="card-h"><h3>Knie</h3><span class="muted" style="font-size:12px">0 bis 10</span></div>${lineChart(K, { min: 0, max: 10, color: "var(--accent)", label: "Knieschmerz", band: [3, 10, "var(--bad)"] })}</div>
+      ${loadCard()}
+      ${benchCard()}
       ${bodyCard}
+      ${photoCard()}
+      ${simCard()}
       <div class="card"><div class="card-h"><h3>Aktivität</h3><span class="muted" style="font-size:12px">12 Wochen</span></div><div class="heat">${hm}</div><div class="heat-l"><span>weniger</span><i class="l1"></i><i class="l2"></i><i class="l3"></i><span>mehr</span></div></div>
       ${prs.length ? `<div class="card"><div class="card-h"><h3>Bestwerte</h3><span class="muted" style="font-size:12px">bester Satz</span></div><div class="items">${prs.map(x => `<button class="item" data-ex="${x.id}"><span class="tx"><b>${esc(S.plan.exercises[x.id].name)}</b><span>${fmt(pd(x.b.date))}</span></span><span class="dose">${fmtKg(x.b.best.w)} kg × ${x.b.best.r}</span></button>`).join("")}</div></div>` : ""}
       ${garminCharts}
@@ -388,7 +396,7 @@ function settingsSheet() {
   openSheet(`<h2 id="sheetTitle">Einstellungen</h2>
     <div class="field"><label for="setRace">Renntag in Paris (${esc(S.plan.race.window)})</label><input class="input" type="date" id="setRace" value="${raceDate()}" min="2027-04-08" max="2027-04-12"></div>
     <div class="field"><label>Darstellung</label><div class="seg" role="group" aria-label="Darstellung">${[["system", "Automatisch"], ["dark", "Dunkel"], ["light", "Hell"]].map(([v, l]) => `<button data-theme-set="${v}" aria-pressed="${S.settings.theme === v}">${l}</button>`).join("")}</div></div>
-    <div class="callout t-endurance"><b>Daten:</b> Plan und Garmin Werte kommen aus dem GitHub Repository und werden täglich aktualisiert. Dein Logbuch liegt nur auf diesem Gerät. Sichere es ab und zu mit Export unter Fortschritt.</div>
+    ${settingsExtras()}
     <p class="muted" style="font-size:12.5px">Übungsfotos: Free Exercise DB (gemeinfrei). Plan Version ${S.plan.version} · Stand ${fmt(pd(S.plan.updated))}${S.garmin && S.garmin.updated ? " · Garmin " + fmt(new Date(S.garmin.updated)) : ""}</p>`);
   $("#setRace").addEventListener("change", e => { if (e.target.value) { S.settings.raceDate = e.target.value; saveSettings(); renderAll(); toast("Renntag gespeichert"); } });
 }
@@ -572,6 +580,290 @@ function daySheet(date) {
     <div class="ss" style="display:flex;flex-direction:column;gap:8px">${ks.map(k => { const s = sess(k), dn2 = isDone(date, k); return `<button class="srow t-${s.type}" data-sess="${k}" data-date="${date}"><span class="bar"></span><span class="tx"><b>${esc(s.name)}</b><span>${esc(s.tag)}${s.dur ? " · " + s.dur + " Min" : ""}</span></span>${s.dur ? `<span class="ck${dn2 ? " on" : ""}">${dn2 ? ICON.check : ""}</span>` : ""}</button>`; }).join("") || '<p class="muted">Kein Training geplant.</p>'}</div>`);
 }
 
+/* ================= Erweiterungen ================= */
+const icon = (p, s = 18) => `<svg viewBox="0 0 24 24" style="width:${s}px;height:${s}px">${p}</svg>`;
+const parseTime = s => { const m = String(s || "").trim().match(/^(?:(\d+):)?(\d{1,2})[:.,](\d{1,2})$/) || String(s || "").trim().match(/^(\d+)$/); if (!m) return 0; if (m.length === 2) return +m[1]; return (+(m[1] || 0)) * 3600 + (+m[2]) * 60 + (+m[3]); };
+const saveKey = (k, v) => { store.set(k, v); scheduleSync(); };
+
+/* ---------- Belastungsampel (Sitzungs RPE × Minuten, akut 7 Tage zu chronisch 28 Tage) ---------- */
+const sessLoad = l => (l.dur || 0) * (l.rpe || 5);
+function loadStats(ref = now()) {
+  const sum = (a, b) => S.logs.filter(l => l.date >= iso(a) && l.date <= iso(b)).reduce((x, l) => x + sessLoad(l), 0);
+  const acute = sum(addD(ref, -6), ref), chronic = sum(addD(ref, -27), ref) / 4;
+  const ratio = chronic > 0 ? acute / chronic : null;
+  let st;
+  if (ratio == null || chronic < 400) st = { c: "rest", lvl: 0, t: "Baut sich auf", a: "Nach 2 bis 3 Wochen mit Einträgen (Minuten und Anstrengung) zeigt die Ampel deine Belastung." };
+  else if (ratio > 1.5) st = { c: "bad", lvl: 3, t: "Zu viel auf einmal", a: "Deutlich mehr als du gewohnt bist. Nächste Gym oder Ausdauer Einheit locker oder Ruhetag. Fussball normal." };
+  else if (ratio > 1.3) st = { c: "warn", lvl: 2, t: "Hohe Belastung", a: "Gut für Fortschritt, aber nicht lange halten. Schlaf und Essen im Blick." };
+  else if (ratio < 0.8) st = { c: "warn", lvl: 1, t: "Weniger als üblich", a: "Eine Entlastungswoche ist ok. Sonst wieder ins normale Volumen zurück." };
+  else st = { c: "good", lvl: 1, t: "Im grünen Bereich", a: "Belastung passt zu dem, was du gewohnt bist." };
+  return { acute, chronic, ratio, st };
+}
+const loadGroup = l => { const s = sess(l.session); return s ? (s.type === "accent" ? "hyrox" : s.type) : "gym"; };
+function loadCard() {
+  const L = loadStats(), ws = monday(now());
+  const weeks = []; for (let i = 7; i >= 0; i--) weeks.push(addD(ws, -7 * i));
+  const G = ["football", "gym", "hyrox", "endurance"], GN = { football: "Fussball", gym: "Gym", hyrox: "Hyrox", endurance: "Ausdauer" };
+  const data = weeks.map(w => { const o = {}; G.forEach(g => o[g] = 0); S.logs.filter(l => l.date >= iso(w) && l.date <= iso(addD(w, 6))).forEach(l => { const g = loadGroup(l); if (o[g] != null) o[g] += sessLoad(l); }); return o; });
+  const mx = Math.max(1500, ...data.map(o => G.reduce((a, g) => a + o[g], 0)));
+  const W = 340, H = 150, bw = (W - 20) / 8;
+  const bars = data.map((o, i) => { let y = H - 22; return G.map(g => { const h = o[g] / mx * (H - 36); y -= h; return h > 0 ? `<rect x="${10 + i * bw + 6}" y="${y}" width="${bw - 12}" height="${h}" fill="var(--${g})" rx="2"/>` : ""; }).join("") + `<text x="${10 + i * bw + bw / 2}" y="${H - 6}" text-anchor="middle">${kw(weeks[i])}</text>`; }).join("");
+  return `<div class="card"><div class="card-h"><h3>Belastung</h3><span class="pill ${L.st.c === "good" ? "good" : L.st.c === "rest" ? "" : "warn"}">${L.ratio ? L.ratio.toFixed(2).replace(".", ",") : "-"}</span></div>
+    <div class="amp"><div class="lights"><i class="${L.st.c === "good" ? "on g" : ""}"></i><i class="${L.st.c === "warn" ? "on y" : ""}"></i><i class="${L.st.c === "bad" ? "on r" : ""}"></i></div><div><b>${esc(L.st.t)}</b><p class="muted" style="font-size:13px">${esc(L.st.a)}</p></div></div>
+    <div class="chart" style="margin-top:12px"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Belastung pro Woche">${bars}</svg></div>
+    <div class="legend">${G.map(g => `<span><i style="background:var(--${g})"></i>${GN[g]}</span>`).join("")}</div></div>`;
+}
+
+/* ---------- Knie Ampel ---------- */
+const RUN_SESS = ["laufRW", "ausdLang", "hx3", "simu", "spiel"];
+function kneeAdvice() {
+  const st = S.settings.kneeStage, max = S.plan.kneeStages.length - 1, since = S.settings.kneeStageSince || "2000-01-01";
+  const recent = S.logs.filter(l => l.knee != null && l.date >= iso(addD(now(), -7)));
+  if (st > 0 && recent.some(l => l.knee >= 4)) return { dir: -1, c: "bad", t: `Das Knie meldete diese Woche ${Math.max(...recent.map(l => l.knee))} von 10. Eine Stufe zurück und Physio fragen.` };
+  const runs = S.logs.filter(l => RUN_SESS.includes(l.session) && l.knee != null && l.date >= since).sort((a, b) => a.date.localeCompare(b.date));
+  const last2 = runs.slice(-2);
+  if (st < max && last2.length === 2 && last2.every(l => l.knee <= 2)) return { dir: 1, c: "good", t: `Zwei Läufe mit höchstens 2 von 10. Bereit für Stufe ${st + 1}: ${S.plan.kneeStages[st + 1].name}.` };
+  const need = 2 - last2.filter(l => l.knee <= 2).length;
+  return { dir: 0, c: "warn", t: need > 0 ? `Noch ${need} Lauf${need > 1 ? "e" : ""} mit Knie höchstens 2 von 10 auf dieser Stufe, dann geht es weiter.` : "Stufe halten." };
+}
+function kneeAdviceHtml() {
+  const a = kneeAdvice();
+  return `<div class="knee-adv ${a.c}"><span class="dot"></span><p>${esc(a.t)}</p>${a.dir ? `<button class="btn small ${a.dir > 0 ? "accent" : "ghost"}" data-kneeset="${S.settings.kneeStage + a.dir}">${a.dir > 0 ? "Stufe rauf" : "Stufe runter"}</button>` : ""}</div>`;
+}
+function setKnee(v) { S.settings.kneeStage = Math.max(0, Math.min(S.plan.kneeStages.length - 1, v)); S.settings.kneeStageSince = iso(now()); saveSettings(); scheduleSync(); }
+
+/* ---------- Benchmarks ---------- */
+const TESTS = [
+  { id: "run1k", name: "1 km Lauf", sub: "Laufband 1 Prozent, Vollgas", knee: true },
+  { id: "ski1k", name: "1000 m SkiErg", sub: "Damper 5 bis 6" },
+  { id: "row1k", name: "1000 m Rudern", sub: "Damper 5 bis 6" },
+  { id: "wb100", name: "100 Wall Balls", sub: "Medizinball 6 kg, 3 m Ziel" }
+];
+const benchLast = () => S.bench.reduce((m, b) => b.date > m ? b.date : m, "");
+const benchDue = () => { const l = benchLast(); return !l || days(pd(l), now()) >= 42; };
+function benchCard() {
+  const rows = TESTS.map(tt => {
+    const h = S.bench.filter(b => b.test === tt.id).sort((a, b) => a.date.localeCompare(b.date));
+    if (!h.length) return `<div class="bench"><div class="tx"><b>${tt.name}</b><span>${tt.sub}</span></div><span class="muted num">offen</span></div>`;
+    const best = Math.min(...h.map(x => x.sec)), first = h[0].sec, last = h[h.length - 1];
+    const imp = first > last.sec ? Math.round((first - last.sec) / first * 100) : 0;
+    const pts = h.slice(-8), mx = Math.max(...pts.map(x => x.sec)), mn = Math.min(...pts.map(x => x.sec));
+    const spark = pts.length > 1 ? `<svg viewBox="0 0 60 22" class="spark"><polyline fill="none" stroke="var(--accent)" stroke-width="2" points="${pts.map((x, i) => `${i * 60 / (pts.length - 1)},${mx === mn ? 11 : 3 + (x.sec - mn) / (mx - mn) * 16}`).join(" ")}"/></svg>` : "";
+    return `<div class="bench"><div class="tx"><b>${tt.name}</b><span>Bestzeit ${hms(best)}${imp ? ` · <em class="good">${imp} Prozent schneller</em>` : ""}</span></div>${spark}<b class="num">${hms(last.sec)}</b></div>`;
+  }).join("");
+  const l = benchLast();
+  return `<div class="card"><div class="card-h"><h3>Benchmarks</h3><button class="btn ghost small" data-bench="new">${ICON.plus} Test</button></div>
+    <div class="benches">${rows}</div><p class="muted" style="font-size:12.5px;margin-top:10px">${l ? `Letzter Test ${fmt(pd(l))}. Nächster ab ${fmt(addD(pd(l), 42))}.` : "Alle 6 Wochen testen. Am besten am Samstag statt der Gym Einheit."}</p></div>`;
+}
+let SW = null;
+function benchSheet(test) {
+  openSheet(`<h2 id="sheetTitle">Benchmark eintragen</h2>
+    <div class="chips" role="group" aria-label="Test" style="flex-wrap:wrap">${TESTS.map(tt => `<button class="chip" data-btest="${tt.id}" aria-pressed="${tt.id === (test || TESTS[0].id)}">${tt.name}</button>`).join("")}</div>
+    <div class="sw"><b class="big-num num" id="swOut">0:00</b><div class="row"><button class="btn accent" id="swGo">${ICON.play} Stoppuhr</button><button class="btn ghost" id="swReset">Zurücksetzen</button></div></div>
+    <div class="field"><label for="bTime">Zeit (Minuten:Sekunden)</label><input class="input num" id="bTime" inputmode="numeric" placeholder="z.B. 3:45"></div>
+    <div class="field"><label for="bDate">Datum</label><input class="input" type="date" id="bDate" value="${iso(now())}"></div>
+    <p class="muted" style="font-size:12.5px" id="bHint">${TESTS[0].knee ? "Beim Lauf: nur ab Knie Stufe 4. Sonst den Test auf dem Velo ersetzen oder auslassen." : ""}</p>
+    <button class="btn accent block" id="bSave">Speichern</button>`);
+  SW = { t0: 0, acc: 0, iv: null };
+}
+function swDraw() { const s = SW.acc + (SW.t0 ? (Date.now() - SW.t0) / 1000 : 0); const o = $("#swOut"); if (o) o.textContent = mmss(s); return s; }
+
+/* ---------- Hyrox Simulation ---------- */
+const SIM = { on: false, t0: 0, seg: 0, splits: [], who: {}, iv: null, segT0: 0 };
+const simTarget = i => HX[i][1] * (S.settings.targetMin * 60 / HX_BASE) + HX_ROX * (S.settings.targetMin * 60 / HX_BASE) / 16;
+function startSim() {
+  Object.assign(SIM, { on: true, t0: Date.now(), seg: 0, splits: [], who: {}, segT0: Date.now() });
+  const el = $("#player"); el.hidden = false; el.className = "player t-hyrox"; document.body.style.overflow = "hidden";
+  try { navigator.wakeLock && navigator.wakeLock.request("screen").then(l => SIM.lock = l).catch(() => {}); } catch {}
+  clearInterval(SIM.iv); SIM.iv = setInterval(simTick, 200); renderSim();
+}
+function simTick() { const a = $("#simTot"), b = $("#simSeg"); if (a) a.textContent = hms((Date.now() - SIM.t0) / 1000); if (b) { const s = (Date.now() - SIM.segT0) / 1000, tg = simTarget(SIM.seg); b.textContent = hms(s); b.style.color = s > tg ? "var(--bad)" : "var(--fg)"; } }
+function renderSim() {
+  const i = SIM.seg, seg = HX[i], run = !!seg[2], who = SIM.who[i] || "beide";
+  const cum = SIM.splits.reduce((a, x) => a + x, 0), tgCum = HX.slice(0, i).reduce((a, _, j) => a + simTarget(j), 0);
+  const delta = i ? cum - tgCum : 0;
+  $("#player").innerHTML = `<div class="p-top"><button class="icon-btn" id="simStop" aria-label="Simulation beenden">${ICON.close}</button><div class="tx"><b>Hyrox Simulation</b><span class="num">Ziel ${hms(S.settings.targetMin * 60)}</span></div><span class="pill num">${i + 1} / 16</span></div>
+    <div class="p-prog" aria-hidden="true">${HX.map((_, j) => `<i class="${j < i ? "on" : j === i ? "cur" : ""}"></i>`).join("")}</div>
+    <div class="p-body sim">
+      <p class="eyebrow">Gesamt</p><b class="big-num num" id="simTot">${hms((Date.now() - SIM.t0) / 1000)}</b>
+      ${i ? `<p class="num ${delta > 0 ? "bad" : "good"}" style="font-weight:700">${delta > 0 ? "+" : "−"}${hms(Math.abs(delta))} zum Plan</p>` : ""}
+      <div class="sim-seg"><p class="eyebrow">${run ? "Lauf " + (i / 2 + 1) + " von 8" : "Station " + Math.ceil(i / 2)}</p><h2>${esc(seg[0])}${run ? " 1 km" : ""}</h2>
+        <div class="row" style="align-items:baseline;gap:14px"><b class="num seg-t" id="simSeg">0:00</b><span class="muted num">Ziel ${hms(simTarget(i))}</span></div>
+        ${run ? "" : `<div class="seg" role="group" aria-label="Wer macht die Station">${[["ich", "Ich"], ["beide", "Geteilt"], ["partner", "Partner"]].map(([v, l]) => `<button data-who="${v}" aria-pressed="${who === v}">${l}</button>`).join("")}</div>`}
+      </div>
+      ${HX[i + 1] ? `<p class="muted">Danach: ${esc(HX[i + 1][0])}</p>` : ""}
+    </div>
+    <div class="p-foot"><button class="btn ghost" id="simBack" ${i === 0 ? "disabled" : ""} aria-label="Letzten Split zurücknehmen">${ICON.left}</button><button class="btn accent" id="simSplit">${i < 15 ? "Split · weiter" : "Ziel"}</button></div>`;
+}
+function simSplit() {
+  const now_ = Date.now(); SIM.splits.push((now_ - SIM.segT0) / 1000); SIM.segT0 = now_; buzz(30);
+  if (SIM.seg >= 15) return endSim(true);
+  SIM.seg++; renderSim();
+}
+function endSim(save) {
+  clearInterval(SIM.iv); try { SIM.lock && SIM.lock.release(); } catch {}
+  $("#player").hidden = true; document.body.style.overflow = ""; SIM.on = false;
+  if (!save || !SIM.splits.length) return;
+  const rec = { id: uid(), date: iso(now()), total: SIM.splits.reduce((a, x) => a + x, 0), splits: SIM.splits.map(x => Math.round(x)), who: SIM.who, segs: SIM.splits.length, target: S.settings.targetMin };
+  S.sims.push(rec); saveKey("sims", S.sims);
+  S.logs.push({ id: uid(), date: rec.date, session: "simu", dur: Math.round(rec.total / 60), rpe: 9, note: `Simulation ${rec.segs}/16 in ${hms(rec.total)}`, ts: new Date().toISOString() }); saveLogs();
+  simResult(rec); renderAll();
+}
+function simResult(r) {
+  const rows = r.splits.map((s, i) => { const tg = simTarget(i), d = s - tg; return `<div class="split${HX[i][2] ? " run" : ""}"><span class="no num">${HX[i][2] ? "R" + (i / 2 + 1) : "S" + Math.ceil(i / 2)}</span><span class="tx">${esc(HX[i][0])}${r.who[i] && r.who[i] !== "beide" ? ` · ${r.who[i] === "ich" ? "ich" : "Partner"}` : ""}</span><span class="num">${hms(s)}</span><span class="num ${d > 0 ? "bad" : "good"}">${d > 0 ? "+" : "−"}${hms(Math.abs(d))}</span></div>`; }).join("");
+  openSheet(`<div><p class="eyebrow">Simulation · ${fmt(pd(r.date))}</p><h2 id="sheetTitle" class="num" style="margin-top:8px">${hms(r.total)}</h2><p class="muted">${r.segs} von 16 Abschnitten · Ziel ${r.target} Min</p></div><div class="splits">${rows}</div>`);
+}
+function simCard() {
+  const L = S.sims.slice().sort((a, b) => b.date.localeCompare(a.date));
+  return `<div class="card"><div class="card-h"><h3>Simulationen</h3><button class="btn accent small" data-sim="start">${ICON.play} Starten</button></div>
+    ${L.length ? `<div class="items">${L.slice(0, 5).map(r => `<button class="item" data-simres="${r.id}"><span class="tx"><b>${fmt(pd(r.date))}</b><span>${r.segs} von 16 Abschnitten</span></span><span class="dose">${hms(r.total)}</span></button>`).join("")}</div>`
+      : `<p class="muted">Stoppuhr mit 16 Splits: Laufen und Stationen. Pro Station tippst du an, wer sie macht. Am Schluss siehst du jeden Abschnitt im Vergleich zur Zielzeit.</p>`}</div>`;
+}
+
+/* ---------- Körpermasse und Fotos (Fotos nur auf dem Gerät, IndexedDB) ---------- */
+const idb = () => new Promise((res, rej) => { const r = indexedDB.open("pp27", 1); r.onupgradeneeded = () => r.result.createObjectStore("photos", { keyPath: "id" }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+async function photoAll() { try { const db = await idb(); return await new Promise(res => { const q = db.transaction("photos").objectStore("photos").getAll(); q.onsuccess = () => res(q.result || []); q.onerror = () => res([]); }); } catch { return []; } }
+async function photoPut(p) { const db = await idb(); return new Promise((res, rej) => { const t = db.transaction("photos", "readwrite"); t.objectStore("photos").put(p); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
+async function photoDel(id) { const db = await idb(); return new Promise(res => { const t = db.transaction("photos", "readwrite"); t.objectStore("photos").delete(id); t.oncomplete = res; }); }
+async function shrink(file) {
+  const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); });
+  const sc = Math.min(1, 1000 / Math.max(img.width, img.height)), c = document.createElement("canvas");
+  c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  URL.revokeObjectURL(img.src);
+  return new Promise(res => c.toBlob(res, "image/jpeg", 0.8));
+}
+function photoCard() {
+  setTimeout(fillPhotos, 0);
+  return `<div class="card"><div class="card-h"><h3>Fortschrittsfotos</h3><label class="btn ghost small" for="photoIn">${ICON.plus} Foto</label><input type="file" id="photoIn" accept="image/*" hidden></div>
+    <div id="photoBox"><p class="muted">Alle 4 Wochen ein Foto, gleiches Licht, gleiche Pose. Die Fotos bleiben nur auf diesem Gerät.</p></div></div>`;
+}
+async function fillPhotos() {
+  const box = $("#photoBox"); if (!box) return;
+  const P2 = (await photoAll()).sort((a, b) => a.date.localeCompare(b.date)); if (!P2.length) return;
+  const url = p => URL.createObjectURL(p.blob);
+  const first = P2[0], last = P2[P2.length - 1];
+  box.innerHTML = `${P2.length > 1 ? `<div class="compare"><figure><img src="${url(first)}" alt="Foto vom ${fmt(pd(first.date))}"><figcaption>${fmt(pd(first.date))}</figcaption></figure><figure><img src="${url(last)}" alt="Foto vom ${fmt(pd(last.date))}"><figcaption>${fmt(pd(last.date))}</figcaption></figure></div>` : ""}
+    <div class="pgrid">${P2.slice().reverse().map(p => `<button class="pthumb" data-photodel="${p.id}" aria-label="Foto vom ${fmt(pd(p.date))} löschen"><img src="${url(p)}" alt=""><span>${fmt(pd(p.date))}</span></button>`).join("")}</div>`;
+}
+
+/* ---------- Supplements ---------- */
+const SUPP_IDEAS = [["Kreatin", "5 g", "08:00"], ["Vitamin D3", "", "08:00"], ["Magnesium", "", "21:30"], ["Omega 3", "", "08:00"], ["Protein Shake", "nach dem Training", ""], ["Elektrolyte", "beim Training", ""]];
+const supps = () => S.settings.supps || [];
+function suppCard() {
+  const list = supps(), today = iso(now()), done = S.suppLog[today] || [];
+  if (!list.length) return `<div class="card span"><div class="card-h"><h3>Supplements</h3></div><p class="muted">Trag ein, was du nimmst. Die App hakt täglich ab und kann dich über den Kalender erinnern.</p><button class="btn ghost small" data-open="supps" style="margin-top:10px">Supplements einrichten</button></div>`;
+  let streak = 0; for (let i = 1; i < 365; i++) { const d = S.suppLog[iso(addD(now(), -i))] || []; if (list.every(x => d.includes(x.id))) streak++; else break; }
+  return `<div class="card span"><div class="card-h"><h3>Supplements</h3><span class="muted num" style="font-size:13px">${done.filter(id => list.some(x => x.id === id)).length} / ${list.length}${streak ? ` · ${streak} Tage am Stück` : ""}</span></div>
+    <div class="supps">${list.map(x => { const on = done.includes(x.id); return `<button class="supp${on ? " on" : ""}" data-supp="${x.id}" aria-pressed="${on}"><span class="ck">${on ? ICON.check : ""}</span><span class="tx"><b>${esc(x.name)}</b><span>${[x.dose, x.time].filter(Boolean).map(esc).join(" · ")}</span></span></button>`; }).join("")}</div>
+    <button class="link" data-open="supps" style="margin-top:10px">Bearbeiten</button></div>`;
+}
+function suppSheet() {
+  const list = supps();
+  openSheet(`<h2 id="sheetTitle">Supplements</h2>
+    <div class="items">${list.length ? list.map(x => `<div class="item static"><span class="tx"><b>${esc(x.name)}</b><span>${[x.dose, x.time ? x.time + " Uhr" : ""].filter(Boolean).map(esc).join(" · ")}</span></span><button class="icon-btn" style="width:32px;height:32px" data-suppdel="${x.id}" aria-label="${esc(x.name)} entfernen">${ICON.close}</button></div>`).join("") : `<div class="item static"><span class="tx"><span>Noch nichts eingetragen.</span></span></div>`}</div>
+    <div><p class="block-t">Vorschläge</p><div class="chips" style="flex-wrap:wrap">${SUPP_IDEAS.filter(i => !list.some(x => x.name === i[0])).map(i => `<button class="chip" data-suppadd="${esc(i.join("|"))}">${ICON.plus.replace("<svg", '<svg style="width:12px;height:12px;vertical-align:-1px"')} ${esc(i[0])}</button>`).join("")}</div></div>
+    <form id="suppForm" class="stack"><div class="row"><input class="input" id="sName" placeholder="Name" required style="flex:2;min-width:140px"><input class="input" id="sDose" placeholder="Menge" style="flex:1;min-width:90px"></div>
+    <div class="row"><label class="muted" for="sTime" style="align-self:center;font-size:13px">Erinnerung</label><input class="input" type="time" id="sTime" style="flex:1"><button class="btn primary" type="submit">Hinzufügen</button></div></form>
+    <p class="muted" style="font-size:12.5px">Erinnerungen kommen über den Kalender. Unter Einstellungen «Kalender exportieren».</p>`);
+}
+
+/* ---------- Kalender (ICS) ---------- */
+function icsExport() {
+  const tz = "Europe/Zurich", p2 = n => String(n).padStart(2, "0");
+  const dt = (d, hm) => { const [h, m] = (hm || "18:00").split(":"); return `${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}T${p2(h)}${p2(m)}00`; };
+  const L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Plan Paris 27//DE", "CALSCALE:GREGORIAN", "X-WR-CALNAME:Plan Paris 27"];
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
+  const end = addD(pd(raceDate()), 2);
+  for (let d = now(); d <= end; d = addD(d, 1)) {
+    sessionsFor(d).forEach(k => {
+      const s = sess(k); if (!s.dur || k === "knie") return;
+      const fb = s.type === "football";
+      L.push("BEGIN:VEVENT", `UID:${iso(d)}-${k}@paris27`, `DTSTAMP:${stamp}`, `DTSTART;TZID=${tz}:${dt(d, fb ? S.settings.timeFb : S.settings.timeTrain)}`, `DURATION:PT${s.dur}M`, `SUMMARY:${s.tag}: ${s.name}`, `DESCRIPTION:${s.goal.replace(/[,;]/g, " ")}`, "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${s.name}`, `TRIGGER:-PT${fb ? 90 : 60}M`, "END:VALARM", "END:VEVENT");
+    });
+  }
+  supps().filter(x => x.time).forEach(x => L.push("BEGIN:VEVENT", `UID:supp-${x.id}@paris27`, `DTSTAMP:${stamp}`, `DTSTART;TZID=${tz}:${dt(now(), x.time)}`, "DURATION:PT5M", "RRULE:FREQ=DAILY", `SUMMARY:${x.name}${x.dose ? " " + x.dose : ""}`, "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${x.name}`, "TRIGGER:PT0M", "END:VALARM", "END:VEVENT"));
+  const nb = benchLast() ? addD(pd(benchLast()), 42) : addD(now(), 4);
+  L.push("BEGIN:VEVENT", `UID:bench-${iso(nb)}@paris27`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${iso(nb).replace(/-/g, "")}`, "SUMMARY:Benchmark Tests fällig", "END:VEVENT", "END:VCALENDAR");
+  const blob = new Blob([L.join("\r\n")], { type: "text/calendar" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "plan-paris-27.ics"; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000); toast("Kalender Datei erstellt");
+}
+
+/* ---------- Wochenrückblick ---------- */
+function reviewSheet(ws) {
+  const we = addD(ws, 6), inW = l => l.date >= iso(ws) && l.date <= iso(we);
+  const L = S.logs.filter(inW), planned = DN.reduce((a, _, i) => a + sessionsFor(addD(ws, i)).filter(k => sess(k).dur && k !== "knie").length, 0);
+  const mins = L.reduce((a, l) => a + (l.dur || 0), 0), load = L.reduce((a, l) => a + sessLoad(l), 0);
+  const knees = L.filter(l => l.knee != null).map(l => l.knee), kAvg = knees.length ? knees.reduce((a, b) => a + b, 0) / knees.length : null;
+  const prs = Object.keys(S.plan.exercises).map(id => { const h = exHistory(id); const before = h.filter(x => x.date < iso(ws)).reduce((m, x) => Math.max(m, x.best.v), 0); const inside = h.filter(x => x.date >= iso(ws) && x.date <= iso(we)); const top = inside.reduce((m, x) => x.best.v > m.best.v ? x : m, { best: { v: 0 } }); return before > 0 && top.best.v > before ? { id, top } : null; }).filter(Boolean);
+  const bw = S.body.filter(x => x.date <= iso(we)).sort((a, b) => a.date.localeCompare(b.date)), bNow = bw[bw.length - 1], bPrev = bw.filter(x => x.date < iso(ws)).pop();
+  const nws = addD(ws, 7), next = DN.map((dn, i) => { const d = addD(nws, i); const ks = sessionsFor(d).filter(k => sess(k).dur && k !== "knie"); return ks.length ? `<span><b>${dn}</b>${esc(ks.map(k => sess(k).name).join(" + "))}</span>` : ""; }).join("");
+  const sc = planned ? Math.round(Math.min(1, L.length / planned) * 100) : (L.length >= 4 ? 100 : L.length >= 2 ? 70 : 0);
+  openSheet(`<div><p class="eyebrow">Wochenrückblick · KW ${kw(ws)}</p><h2 id="sheetTitle" style="margin-top:8px">${sc >= 90 ? "Starke Woche" : sc >= 60 ? "Solide Woche" : L.length ? "Durchzogene Woche" : "Pause Woche"}</h2><p class="muted">${fmt(ws)} bis ${fmt(we)}</p></div>
+    <div class="stats" style="margin:0"><div class="stat"><b class="num">${planned ? L.length + "/" + planned : L.length}</b><span>Einheiten</span></div><div class="stat"><b class="num">${mins}</b><span>Minuten</span></div><div class="stat"><b class="num">${load ? String(Math.round(load / 100) / 10).replace(".", ",") + "k" : "-"}</b><span>Belastung</span></div></div>
+    <div class="items">
+      <div class="item static"><span class="tx"><b>Knie</b><span>Durchschnitt aus ${knees.length} Einträgen</span></span><span class="dose">${kAvg != null ? kAvg.toFixed(1).replace(".", ",") + " / 10" : "-"}</span></div>
+      <div class="item static"><span class="tx"><b>Körpergewicht</b><span>${bPrev ? "Veränderung zur Vorwoche" : "letzter Wert"}</span></span><span class="dose">${bNow ? fmtKg(bNow.kg) + " kg" + (bPrev ? ` (${bNow.kg - bPrev.kg > 0 ? "+" : ""}${fmtKg(bNow.kg - bPrev.kg)})` : "") : "-"}</span></div>
+      <div class="item static"><span class="tx"><b>Bestwerte</b><span>${prs.length ? prs.map(x => esc(S.plan.exercises[x.id].name)).join(", ") : "keine neuen"}</span></span><span class="dose">${prs.length}</span></div>
+    </div>
+    <div><p class="block-t">Nächste Woche · KW ${kw(nws)}</p><div class="phase" style="display:block;padding:12px"><div class="wk" style="margin:0">${next}</div></div></div>
+    <div class="row"><button class="btn ghost" data-review="${iso(addD(ws, -7))}">${ICON.left} Vorwoche</button>${iso(nws) <= iso(monday(now())) ? `<button class="btn ghost" data-review="${iso(nws)}">Folgewoche ${ICON.right}</button>` : ""}</div>`);
+}
+
+/* ---------- Sync über privates GitHub Repository ---------- */
+const SYNC_KEYS = ["logs", "body", "checkins", "bench", "sims", "suppLog"];
+let syncT = null, syncBusy = false;
+function scheduleSync() { if (!S.settings.ghToken || !S.settings.ghRepo) return; clearTimeout(syncT); syncT = setTimeout(() => ghSync().catch(() => {}), 2500); }
+const b64e = s => btoa(unescape(encodeURIComponent(s))), b64d = s => decodeURIComponent(escape(atob(s.replace(/\n/g, ""))));
+function mergeData(r) {
+  const del = new Set([...(S.deleted || []), ...((r && r.deleted) || [])]); S.deleted = [...del];
+  const byId = (a = [], b = []) => { const m = new Map(); [...a, ...b].forEach(x => x && x.id && m.set(x.id, x)); return [...m.values()].filter(x => !del.has(x.id)); };
+  const byDate = (a = [], b = []) => { const m = new Map(); [...b, ...a].forEach(x => x && x.date && m.set(x.date, { ...m.get(x.date), ...x })); return [...m.values()]; };
+  S.logs = byId(r.logs, S.logs); S.bench = byId(r.bench, S.bench); S.sims = byId(r.sims, S.sims);
+  S.body = byDate(S.body, r.body); S.checkins = { ...(r.checkins || {}), ...S.checkins };
+  const sl = { ...(r.suppLog || {}) }; Object.entries(S.suppLog).forEach(([d, ids]) => sl[d] = [...new Set([...(sl[d] || []), ...ids])]); S.suppLog = sl;
+  if (r.settings && r.settings.supps && !(S.settings.supps || []).length) S.settings.supps = r.settings.supps;
+}
+async function ghSync(manual) {
+  const { ghToken, ghRepo } = S.settings; if (!ghToken || !ghRepo || syncBusy) return;
+  syncBusy = true;
+  try {
+    const url = `https://api.github.com/repos/${ghRepo}/contents/logbuch.json`, h = { Authorization: "Bearer " + ghToken, Accept: "application/vnd.github+json" };
+    let sha, remote = {};
+    const r = await fetch(url, { headers: h, cache: "no-store" });
+    if (r.ok) { const j = await r.json(); sha = j.sha; remote = JSON.parse(b64d(j.content)); } else if (r.status !== 404) throw new Error("Lesen fehlgeschlagen (" + r.status + ")");
+    mergeData(remote);
+    SYNC_KEYS.forEach(k => store.set(k, S[k])); store.set("deleted", S.deleted); saveSettings();
+    const out = { updated: new Date().toISOString(), deleted: S.deleted, settings: { supps: S.settings.supps || [], kneeStage: S.settings.kneeStage }, logs: S.logs, body: S.body, checkins: S.checkins, bench: S.bench, sims: S.sims, suppLog: S.suppLog };
+    const w = await fetch(url, { method: "PUT", headers: { ...h, "Content-Type": "application/json" }, body: JSON.stringify({ message: "Logbuch " + iso(now()), content: b64e(JSON.stringify(out, null, 1)), sha }) });
+    if (!w.ok) throw new Error("Schreiben fehlgeschlagen (" + w.status + ")");
+    S.settings.lastSync = new Date().toISOString(); S.settings.syncErr = ""; saveSettings();
+    if (manual) { toast("Synchronisiert"); renderAll(); }
+  } catch (e) { S.settings.syncErr = String(e.message || e); saveSettings(); if (manual) toast("Sync: " + S.settings.syncErr); }
+  finally { syncBusy = false; }
+}
+function settingsExtras() {
+  const st = S.settings;
+  return `<div><p class="block-t">Kalender und Erinnerungen</p><div class="row"><div class="field" style="flex:1"><label for="tTrain">Training um</label><input class="input" type="time" id="tTrain" value="${st.timeTrain || "18:00"}"></div><div class="field" style="flex:1"><label for="tFb">Fussball um</label><input class="input" type="time" id="tFb" value="${st.timeFb || "19:30"}"></div></div>
+    <button class="btn primary block" data-ics style="margin-top:10px">Kalender exportieren</button><p class="muted" style="font-size:12.5px;margin-top:6px">Alle Trainings bis Paris, mit Erinnerung vorher, dazu deine Supplements täglich. Auf dem iPhone die Datei öffnen und «Alle hinzufügen» wählen. Ändert sich der Plan, nochmals exportieren.</p></div>
+    <div><p class="block-t">Supplements</p><button class="btn ghost block" data-open="supps">${supps().length ? supps().length + " eingetragen · Bearbeiten" : "Einrichten"}</button></div>
+    <div><p class="block-t">Sync über GitHub</p>
+      <div class="field"><label for="ghRepo">Privates Repository</label><input class="input" id="ghRepo" value="${esc(st.ghRepo || "jamiro-sys/training-data")}" autocomplete="off"></div>
+      <div class="field" style="margin-top:8px"><label for="ghToken">Zugangsschlüssel (Fine grained token)</label><input class="input" id="ghToken" type="password" value="${esc(st.ghToken || "")}" autocomplete="off" placeholder="github_pat_..."></div>
+      <div class="row" style="margin-top:10px"><button class="btn primary" data-sync="save">Speichern und synchronisieren</button>${st.ghToken ? `<button class="btn ghost" data-sync="off">Trennen</button>` : ""}</div>
+      <p class="muted" style="font-size:12.5px;margin-top:6px">${st.lastSync ? "Zuletzt " + new Date(st.lastSync).toLocaleString("de-CH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) + ". " : ""}${st.syncErr ? `<span style="color:var(--bad)">${esc(st.syncErr)}.</span> ` : ""}Logbuch, Gewicht, Tests und Supplements werden in logbuch.json gesichert und sind auf jedem Gerät gleich. Fotos bleiben auf dem Gerät. Der Schlüssel bleibt nur in diesem Browser.</p></div>`;
+}
+
+/* ---------- Karten auf Heute ---------- */
+function heuteExtras(main) {
+  const t = now(), out = [];
+  if (wd(t) === 6 || wd(t) === 0) { const ws = wd(t) === 6 ? monday(t) : monday(addD(t, -1)); out.push(`<button class="card span review-cta" data-review="${iso(ws)}"><span class="eyebrow">Wochenrückblick</span><b>KW ${kw(ws)} ansehen</b><span class="muted">Einheiten, Bestwerte, Knie und was nächste Woche kommt</span></button>`); }
+  if (benchDue() && iso(t) >= "2026-11-28") out.push(`<div class="card span bench-due"><div><span class="eyebrow">Benchmark fällig</span><b>${benchLast() ? "6 Wochen seit dem letzten Test" : "Erster Test: deine Ausgangswerte"}</b><span class="muted">SkiErg, Rudern, Wall Balls${S.settings.kneeStage >= 4 ? " und 1 km Lauf" : ""}. Ersetzt die Gym Einheit am Samstag.</span></div><button class="btn accent small" data-bench="new">Eintragen</button></div>`);
+  const L = loadStats(); if (L.st.lvl >= 2) out.push(`<div class="card span"><div class="amp"><div class="lights"><i class="${L.st.c === "warn" ? "on y" : ""}"></i><i class="${L.st.c === "bad" ? "on r" : ""}"></i></div><div><b>${esc(L.st.t)}</b><p class="muted" style="font-size:13px">${esc(L.st.a)}</p></div></div></div>`);
+  out.push(suppCard());
+  return out.join("");
+}
+
 /* ---------- Events ---------- */
 document.addEventListener("click", e => {
   const t = e.target.closest("[data-goto],[data-checkin],[data-resume],[data-intro],[data-jump],[data-start],[data-sess],[data-ex],[data-day],[data-week],[data-mode],[data-cat],[data-open],[data-knee],[data-setknee],[data-quicklog],[data-del],[data-theme-set],[data-done]");
@@ -592,12 +884,13 @@ document.addEventListener("click", e => {
   if (d.open === "settings") return settingsSheet();
   if (d.open === "knee") return kneeSheet();
   if (d.open === "log") return logSheet(null, iso(now()));
-  if (d.knee) { S.settings.kneeStage = Math.max(0, Math.min(S.plan.kneeStages.length - 1, S.settings.kneeStage + +d.knee)); saveSettings(); return renderHeute(); }
-  if (d.setknee) { S.settings.kneeStage = +d.setknee; saveSettings(); closeSheet(); renderAll(); return toast("Knie Stufe " + d.setknee); }
+  if (d.open === "supps") return suppSheet();
+  if (d.knee) { setKnee(S.settings.kneeStage + +d.knee); return renderHeute(); }
+  if (d.setknee) { setKnee(+d.setknee); closeSheet(); renderAll(); return toast("Knie Stufe " + d.setknee); }
   if (d.themeSet) { S.settings.theme = d.themeSet; saveSettings(); applyTheme(); t.parentElement.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b === t)); return; }
   if (d.del) {
     if (t.dataset.confirm !== "1") { t.dataset.confirm = "1"; t.style.background = "var(--bad)"; t.style.color = "var(--bg)"; t.setAttribute("aria-label", "Nochmals tippen zum Löschen"); toast("Nochmals tippen zum Löschen"); setTimeout(() => { if (t.isConnected) { t.dataset.confirm = ""; t.style.background = ""; t.style.color = ""; } }, 3000); return; }
-    S.logs = S.logs.filter(l => l.id !== d.del); saveLogs(); renderAll(); return toast("Gelöscht");
+    S.logs = S.logs.filter(l => l.id !== d.del); S.deleted.push(d.del); store.set("deleted", S.deleted); saveLogs(); renderAll(); return toast("Gelöscht");
   }
   if (d.done !== undefined && t.closest("#player")) {
     const j = +d.done, st = P.steps[P.i], row = P.sets[P.i][j]; row.d = !row.d;
@@ -632,13 +925,15 @@ document.addEventListener("click", e => {
   const sc = b.parentElement; sc.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
   const pick = k => { const x = document.querySelector(`[data-ci="${k}"] [aria-pressed="true"]`); return x ? +x.dataset.v : null; };
   const c = { sleep: pick("sleep"), energy: pick("energy"), sore: pick("sore") };
-  if (c.sleep && c.energy && c.sore) { S.checkins[iso(now())] = c; store.set("checkins", S.checkins); setTimeout(renderHeute, 250); toast("Tagesform gespeichert"); }
+  if (c.sleep && c.energy && c.sore) { S.checkins[iso(now())] = c; saveKey("checkins", S.checkins); setTimeout(renderHeute, 250); toast("Tagesform gespeichert"); }
 });
 document.addEventListener("change", e => { if (e.target.id === "hxRange") renderPlan(); });
 document.addEventListener("submit", e => {
   if (e.target.id !== "bodyForm") return; e.preventDefault();
-  const kg = num($("#bodyKg").value); if (kg < 30 || kg > 250) return toast("Bitte Gewicht in kg eingeben");
-  const d = iso(now()); S.body = S.body.filter(x => x.date !== d).concat({ date: d, kg }); store.set("body", S.body); renderFortschritt(); toast("Gewicht gespeichert");
+  const kg = num($("#bodyKg").value), waist = num($("#bodyWaist").value);
+  if ((kg && (kg < 30 || kg > 250)) || (waist && (waist < 40 || waist > 200)) || (!kg && !waist)) return toast("Bitte Gewicht in kg oder Bauchumfang in cm eingeben");
+  const d = iso(now()), old = S.body.find(x => x.date === d) || { date: d };
+  S.body = S.body.filter(x => x.date !== d).concat({ ...old, ...(kg ? { kg } : {}), ...(waist ? { waist } : {}) }); saveKey("body", S.body); renderFortschritt(); toast("Gespeichert");
 });
 document.addEventListener("input", e => {
   if (e.target.id !== "hxRange") return;
@@ -669,6 +964,65 @@ function importLogs(file) {
   r.readAsText(file);
 }
 
+/* ---------- Events Erweiterungen ---------- */
+document.addEventListener("click", async e => {
+  const q = sel => e.target.closest(sel);
+  let b;
+  if ((b = q("[data-kneeset]"))) { setKnee(+b.dataset.kneeset); renderAll(); return toast("Knie Stufe " + S.settings.kneeStage); }
+  if ((b = q("[data-review]"))) return reviewSheet(pd(b.dataset.review));
+  if ((b = q("[data-bench]"))) return benchSheet();
+  if ((b = q("[data-btest]"))) { b.parentElement.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); const tt = TESTS.find(x => x.id === b.dataset.btest); $("#bHint").textContent = tt.knee ? "Beim Lauf: nur ab Knie Stufe 4." : tt.sub; return; }
+  if (q("#swGo")) { if (SW.t0) { SW.acc += (Date.now() - SW.t0) / 1000; SW.t0 = 0; clearInterval(SW.iv); $("#swGo").innerHTML = ICON.play + " Weiter"; $("#bTime").value = mmss(swDraw()); buzz(30); } else { SW.t0 = Date.now(); SW.iv = setInterval(swDraw, 200); $("#swGo").textContent = "Stopp"; } return; }
+  if (q("#swReset")) { clearInterval(SW.iv); SW = { t0: 0, acc: 0, iv: null }; swDraw(); $("#swGo").innerHTML = ICON.play + " Stoppuhr"; return; }
+  if (q("#bSave")) {
+    const test = (document.querySelector("[data-btest][aria-pressed='true']") || {}).dataset?.btest, sec = parseTime($("#bTime").value);
+    if (!test || sec < 20) return toast("Bitte Zeit eingeben, z.B. 3:45");
+    clearInterval(SW && SW.iv);
+    const prev = S.bench.filter(x => x.test === test).reduce((m, x) => Math.min(m, x.sec), Infinity);
+    S.bench.push({ id: uid(), test, sec, date: $("#bDate").value || iso(now()) }); saveKey("bench", S.bench);
+    closeSheet(); renderAll(); return toast(sec < prev && prev !== Infinity ? "Neue Bestzeit!" : "Test gespeichert");
+  }
+  if (q("[data-sim]")) return startSim();
+  if (q("#simSplit")) return simSplit();
+  if (q("#simBack")) { const last = SIM.splits.pop(); if (last != null) { SIM.seg--; SIM.segT0 = Date.now() - ((Date.now() - SIM.segT0) / 1000 + last) * 1000; renderSim(); } return; }
+  if ((b = q("[data-who]"))) { SIM.who[SIM.seg] = b.dataset.who; return renderSim(); }
+  if (q("#simStop")) {
+    openSheet(`<h2 id="sheetTitle">Simulation beenden?</h2><p class="muted">${SIM.splits.length} von 16 Abschnitten geschafft.</p><div class="stack">${SIM.splits.length ? `<button class="btn accent block" id="simSave">Speichern</button>` : ""}<button class="btn primary block" id="simCont">Weitermachen</button><button class="btn ghost block" id="simDrop">Verwerfen</button></div>`);
+    return;
+  }
+  if (q("#simSave")) { closeSheet(); return endSim(true); }
+  if (q("#simCont")) return closeSheet();
+  if (q("#simDrop")) { closeSheet(); return endSim(false); }
+  if ((b = q("[data-simres]"))) { const r = S.sims.find(x => x.id === b.dataset.simres); return r && simResult(r); }
+  if ((b = q("[data-photodel]"))) {
+    if (b.dataset.c !== "1") { b.dataset.c = "1"; b.classList.add("confirm"); toast("Nochmals tippen zum Löschen"); setTimeout(() => { b.dataset.c = ""; b.classList.remove("confirm"); }, 3000); return; }
+    await photoDel(b.dataset.photodel); renderFortschritt(); return toast("Foto gelöscht");
+  }
+  if ((b = q("[data-supp]"))) {
+    const d = iso(now()), cur = new Set(S.suppLog[d] || []); cur.has(b.dataset.supp) ? cur.delete(b.dataset.supp) : (cur.add(b.dataset.supp), buzz(20));
+    S.suppLog[d] = [...cur]; saveKey("suppLog", S.suppLog); return renderHeute();
+  }
+  if ((b = q("[data-suppdel]"))) { S.settings.supps = supps().filter(x => x.id !== b.dataset.suppdel); saveSettings(); scheduleSync(); suppSheet(); return renderHeute(); }
+  if ((b = q("[data-suppadd]"))) { const [name, dose, time] = b.dataset.suppadd.split("|"); S.settings.supps = supps().concat({ id: uid(), name, dose, time }); saveSettings(); scheduleSync(); suppSheet(); return renderHeute(); }
+  if (q("[data-ics]")) { S.settings.timeTrain = $("#tTrain").value || "18:00"; S.settings.timeFb = $("#tFb").value || "19:30"; saveSettings(); return icsExport(); }
+  if ((b = q("[data-sync]"))) {
+    if (b.dataset.sync === "off") { S.settings.ghToken = ""; S.settings.lastSync = ""; saveSettings(); settingsSheet(); return toast("Sync getrennt"); }
+    S.settings.ghRepo = $("#ghRepo").value.trim().replace(/^https:\/\/github\.com\//, "").replace(/\/$/, ""); S.settings.ghToken = $("#ghToken").value.trim(); saveSettings();
+    await ghSync(true); return settingsSheet();
+  }
+});
+document.addEventListener("submit", e => {
+  if (e.target.id !== "suppForm") return; e.preventDefault();
+  const name = $("#sName").value.trim(); if (!name) return;
+  S.settings.supps = supps().concat({ id: uid(), name, dose: $("#sDose").value.trim(), time: $("#sTime").value }); saveSettings(); scheduleSync(); suppSheet(); renderHeute(); toast(name + " hinzugefügt");
+});
+document.addEventListener("change", async e => {
+  if (e.target.id !== "photoIn" || !e.target.files[0]) return;
+  try { const blob = await shrink(e.target.files[0]); await photoPut({ id: uid(), date: iso(now()), blob }); renderFortschritt(); toast("Foto gespeichert"); }
+  catch { toast("Foto konnte nicht gespeichert werden"); }
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && SIM.on && $("#sheet").hidden) { e.stopImmediatePropagation(); $("#simStop").click(); } }, true);
+
 /* ---------- Navigation ---------- */
 const VIEWS = ["heute", "plan", "uebungen", "fortschritt"];
 function route() {
@@ -692,6 +1046,7 @@ async function load(path, fallback) { try { const r = await fetch(path, { cache:
   window.ExPhotos = Object.fromEntries(Object.entries(plan.exercises).filter(([, e]) => e.photo).map(([k, e]) => [k, { id: e.photo, fit: e.photoFit }]));
   if (S.settings.kneeStage >= plan.kneeStages.length) S.settings.kneeStage = 1;
   renderAll(); route();
+  if (S.settings.ghToken) ghSync().then(renderAll).catch(() => {});
   if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 })();
 })();
