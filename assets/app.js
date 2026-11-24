@@ -104,7 +104,8 @@ function suggest(st) {
 function readinessToday() {
   const today = iso(now());
   const g = S.garmin && S.garmin.readiness;
-  if (g && g.score != null && (!g.date || g.date >= iso(addD(now(), -1)))) return { src: "garmin", score: g.score, g };
+  const full = g && (g.hrv != null || g.restingHr != null);
+  if (g && full && g.score != null && (!g.date || g.date >= iso(addD(now(), -1)))) return { src: "garmin", score: g.score, g };
   const c = S.checkins[today];
   if (c) return { src: "check", score: Math.round(((c.sleep + c.energy + (6 - c.sore)) - 3) / 12 * 100), c };
   return null;
