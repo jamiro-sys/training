@@ -1,4 +1,4 @@
-// Holt Garmin Daten über intervals.icu und schreibt data/garmin.json.
+// Holt Garmin Daten über intervals.icu (Aktivitäten, Schlaf, HRV, Ruhepuls) und schreibt garmin.json und garmin-history.json.
 // Benötigt INTERVALS_API_KEY und INTERVALS_ATHLETE_ID (z.B. i123456). Schreibt nach DATA_DIR (im Workflow: privates Repository).
 import { readFile, writeFile } from "node:fs/promises";
 
