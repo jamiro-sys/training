@@ -312,7 +312,7 @@ function renderFortschritt() {
   const gd = (S.garmin && S.garmin.days) || [];
   const gChart = (key, label, color, unit) => { const pts = gd.filter(d => d[key] != null).slice(-28).map(d => ({ v: d[key], l: fmt(pd(d.date)) })); if (pts.length < 2) return ""; const vs = pts.map(p => p.v); const mn = Math.floor(Math.min(...vs) * .95), mxv = Math.ceil(Math.max(...vs) * 1.05); return `<div class="card chart"><div class="card-h"><h3>${label}</h3><span class="num muted">${pts[pts.length - 1].v}${unit}</span></div>${lineChart(pts, { min: mn, max: mxv, color, label, unit })}</div>`; };
   const garminCharts = gd.length ? gChart("hrv", "HRV", "var(--hyrox)", " ms") + gChart("restingHr", "Ruhepuls", "var(--accent)", " bpm") + gChart("sleepH", "Schlaf", "var(--endurance)", " h") + gChart("runKm", "Laufkilometer pro Tag", "var(--football)", " km")
-    : `<div class="empty span"><b>Garmin Daten folgen.</b><span>So verbindest du Garmin:</span><ol><li>Gratis Konto auf intervals.icu erstellen und Garmin verbinden.</li><li>API Key und Athleten ID als GitHub Secrets hinterlegen.</li><li>Ab dann holt die Seite die Werte jeden Morgen und Abend automatisch.</li></ol></div>`;
+    : `<div class="empty span"><b>Garmin Daten sind privat.</b><span>So siehst du sie auf diesem Gerät:</span><ol><li>Die Garmin Daten liegen privat im Repository training-data.</li><li>Unter Einstellungen bei «Sync über GitHub» deinen Schlüssel eintragen.</li><li>Danach erscheinen Schlaf, Aktivitäten und Verlauf hier.</li></ol></div>`;
 
   const acts = ((S.garmin && S.garmin.activities) || []).slice(0, 8);
   // Körpergewicht
@@ -854,7 +854,7 @@ function settingsExtras() {
       <div class="field"><label for="ghRepo">Privates Repository</label><input class="input" id="ghRepo" value="${esc(st.ghRepo || "jamiro-sys/training-data")}" autocomplete="off"></div>
       <div class="field" style="margin-top:8px"><label for="ghToken">Zugangsschlüssel (Fine grained token)</label><input class="input" id="ghToken" type="password" value="${esc(st.ghToken || "")}" autocomplete="off" placeholder="github_pat_..."></div>
       <div class="row" style="margin-top:10px"><button class="btn primary" data-sync="save">Speichern und synchronisieren</button>${st.ghToken ? `<button class="btn ghost" data-sync="off">Trennen</button>` : ""}</div>
-      <p class="muted" style="font-size:12.5px;margin-top:6px">${st.lastSync ? "Zuletzt " + new Date(st.lastSync).toLocaleString("de-CH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) + ". " : ""}${st.syncErr ? `<span style="color:var(--bad)">${esc(st.syncErr)}.</span> ` : ""}Logbuch, Gewicht, Tests und Supplements werden in logbuch.json gesichert und sind auf jedem Gerät gleich. Fotos bleiben auf dem Gerät. Der Schlüssel bleibt nur in diesem Browser.</p></div>`;
+      <p class="muted" style="font-size:12.5px;margin-top:6px">${st.lastSync ? "Zuletzt " + new Date(st.lastSync).toLocaleString("de-CH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) + ". " : ""}${st.syncErr ? `<span style="color:var(--bad)">${esc(st.syncErr)}.</span> ` : ""}Der Schlüssel öffnet dein privates Repository: Die App liest dort Garmin Daten und Coach Notiz und sichert Logbuch, Gewicht, Tests und Supplements in logbuch.json. Fotos bleiben auf dem Gerät. Der Schlüssel bleibt nur in diesem Browser.</p></div>`;
 }
 
 /* ---------- Karten auf Heute ---------- */
@@ -1104,8 +1104,8 @@ document.addEventListener("click", async e => {
   if (q("[data-ics]")) { S.settings.timeTrain = $("#tTrain").value || "18:00"; S.settings.timeFb = $("#tFb").value || "19:30"; saveSettings(); return icsExport(); }
   if ((b = q("[data-sync]"))) {
     if (b.dataset.sync === "off") { S.settings.ghToken = ""; S.settings.lastSync = ""; saveSettings(); settingsSheet(); return toast("Sync getrennt"); }
-    S.settings.ghRepo = $("#ghRepo").value.trim().replace(/^https:\/\/github\.com\//, "").replace(/\/$/, ""); S.settings.ghToken = $("#ghToken").value.trim(); saveSettings();
-    await ghSync(true); return settingsSheet();
+    S.settings.ghRepo = ($("#ghRepo").value.trim() || "jamiro-sys/training-data").replace(/^https:\/\/github\.com\//, "").replace(/\/$/, ""); S.settings.ghToken = $("#ghToken").value.trim(); saveSettings();
+    await ghSync(true); await reloadPrivate(); return settingsSheet();
   }
 });
 document.addEventListener("submit", e => {
@@ -1134,11 +1134,24 @@ function applyTheme() { document.documentElement.setAttribute("data-theme", "dar
 function renderAll() { renderHeute(); renderPlan(); renderUebungen(); renderFortschritt(); countUp($("#v-heute")); }
 
 /* ---------- Start ---------- */
+/* Persönliche Daten liegen im privaten Repository und werden mit dem eigenen Schlüssel gelesen */
+const dataRepo = () => S.settings.ghRepo || "jamiro-sys/training-data";
+async function privGet(path) {
+  if (!S.settings.ghToken) return null;
+  try {
+    const r = await fetch(`https://api.github.com/repos/${dataRepo()}/contents/${path}`, { headers: { Authorization: "Bearer " + S.settings.ghToken, Accept: "application/vnd.github.raw+json" }, cache: "no-store" });
+    if (!r.ok) return null; return JSON.parse(await r.text());
+  } catch { return null; }
+}
+async function reloadPrivate() {
+  const [g, c, h] = await Promise.all([privGet("garmin.json"), privGet("coach.json"), privGet("garmin-history.json")]);
+  S.garmin = g; S.coach = c; S.history = h; renderAll();
+}
 async function load(path, fallback) { try { const r = await fetch(path, { cache: "no-cache" }); if (!r.ok) throw 0; return await r.json(); } catch { return fallback; } }
 (async () => {
   applyTheme();
-  const [plan, garmin, coach] = await Promise.all([load("data/plan.json", null), load("data/garmin.json", null), load("data/coach.json", null)]);
-  load("data/garmin-history.json", null).then(h => { S.history = h; if (h && S.plan) renderFortschritt(); });
+  const [plan, garmin, coach] = await Promise.all([load("data/plan.json", null), privGet("garmin.json"), privGet("coach.json")]);
+  privGet("garmin-history.json").then(h => { S.history = h; if (h && S.plan) renderFortschritt(); });
   if (!plan) { $("#v-heute").innerHTML = `<div class="empty"><b>Plan konnte nicht geladen werden.</b><span>Prüfe die Internetverbindung und lade die Seite neu.</span></div>`; return; }
   S.plan = plan; S.garmin = garmin; S.coach = coach;
   window.ExPhotos = Object.fromEntries(Object.entries(plan.exercises).filter(([, e]) => e.photo).map(([k, e]) => [k, { id: e.photo, fit: e.photoFit }]));
