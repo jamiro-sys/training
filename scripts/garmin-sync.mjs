@@ -10,7 +10,8 @@ const today = new Date();
 // Archiv: beim ersten Lauf die ganze Historie ab 2024 holen, danach die letzten 42 Tage
 const hist = JSON.parse(await readFile(`${DIR}/garmin-history.json`, "utf8").catch(() => "null")) || { days: {}, activities: {} };
 // Ganze Historie neu holen, wenn das Archiv leer ist oder noch keine HRV und keinen Ruhepuls enthält (z.B. nach neuer Garmin Freigabe)
-const firstRun = !Object.keys(hist.days).length || !Object.values(hist.days).some(d => d.hrv != null || d.restingHr != null);
+// Zusätzlich jeden Sonntagmorgen alles neu holen, falls Garmin ältere Werte nachliefert
+const firstRun = !Object.keys(hist.days).length || !Object.values(hist.days).some(d => d.hrv != null) || (today.getUTCDay() === 0 && today.getUTCHours() < 12);
 const oldest = firstRun ? new Date("2024-01-01T00:00:00Z") : new Date(today.getTime() - 41 * 864e5);
 const auth = "Basic " + Buffer.from("API_KEY:" + KEY).toString("base64");
 async function get(path) {
