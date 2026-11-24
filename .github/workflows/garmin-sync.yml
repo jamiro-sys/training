@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["scripts/garmin-sync.mjs", ".github/workflows/garmin-sync.yml"]
+    paths: ["scripts/garmin-sync.mjs", ".github/workflows/garmin-sync.yml", "scripts/sync-jetzt.txt"]
 
 permissions:
   contents: read
