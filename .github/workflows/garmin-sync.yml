@@ -7,6 +7,8 @@ on:
   schedule:
     - cron: "0 11,23 * * *"  # 12:00 und 00:00 Uhr Schweizer Winterzeit (UTC+1)
     - cron: "0 10,22 * * *"  # 12:00 und 00:00 Uhr Schweizer Sommerzeit (UTC+2)
+    - cron: "15 5 * * *"     # 06:15 Uhr Winterzeit, frische Nachtwerte fürs Morgenbriefing um 06:40
+    - cron: "15 4 * * *"     # 06:15 Uhr Sommerzeit
   workflow_dispatch:
   push:
     branches: [main]
@@ -27,8 +29,9 @@ jobs:
         if: github.event_name == 'schedule'
         run: |
           off=$(TZ=Europe/Zurich date +%z)
-          if [ "$off" = "+0100" ] && [ "${{ github.event.schedule }}" != "0 11,23 * * *" ]; then echo "Sommerzeit Lauf im Winter, übersprungen"; echo "SKIP=1" >> $GITHUB_ENV; fi
-          if [ "$off" = "+0200" ] && [ "${{ github.event.schedule }}" != "0 10,22 * * *" ]; then echo "Winterzeit Lauf im Sommer, übersprungen"; echo "SKIP=1" >> $GITHUB_ENV; fi
+          sch="${{ github.event.schedule }}"
+          if [ "$off" = "+0100" ] && [ "$sch" != "0 11,23 * * *" ] && [ "$sch" != "15 5 * * *" ]; then echo "Sommerzeit Lauf im Winter, übersprungen"; echo "SKIP=1" >> $GITHUB_ENV; fi
+          if [ "$off" = "+0200" ] && [ "$sch" != "0 10,22 * * *" ] && [ "$sch" != "15 4 * * *" ]; then echo "Winterzeit Lauf im Sommer, übersprungen"; echo "SKIP=1" >> $GITHUB_ENV; fi
       - name: Zugang prüfen
         if: env.SKIP != '1'
         env:

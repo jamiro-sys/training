@@ -11,7 +11,7 @@ Statische Trainings App (GitHub Pages, Branch `main`, Root). Kein Build Schritt.
 Deutsch (Schweiz). Kein scharfes s (immer "ss"), keine Gedankenstriche (– oder —) und kein " - " als Satzzeichen.
 
 ## Tägliches Update
-1. Garmin Daten kommen automatisch: Der Workflow `.github/workflows/garmin-sync.yml` holt sie um 12:00 und 00:00 Uhr Schweizer Zeit über intervals.icu (`scripts/garmin-sync.mjs`, Secrets `INTERVALS_API_KEY`, `INTERVALS_ATHLETE_ID`) (Secret `DATA_REPO_TOKEN` für das private Repository) und schreibt `garmin.json` und `garmin-history.json` ins private Repository `jamiro-sys/training-data`. Für das Coaching dieses Repository klonen und die Dateien dort lesen. Ist sie leer (`updated: null`), nichts ändern.
+1. Garmin Daten kommen automatisch: Der Workflow `.github/workflows/garmin-sync.yml` holt sie um 00:00, 06:15 (fürs Morgenbriefing um 06:40) und 12:00 Uhr Schweizer Zeit über intervals.icu (`scripts/garmin-sync.mjs`, Secrets `INTERVALS_API_KEY`, `INTERVALS_ATHLETE_ID`) (Secret `DATA_REPO_TOKEN` für das private Repository) und schreibt `garmin.json` und `garmin-history.json` ins private Repository `jamiro-sys/training-data`. Für das Coaching dieses Repository klonen und die Dateien dort lesen. Ist sie leer (`updated: null`), nichts ändern.
 2. Aufbau von `garmin.json`:
    ```json
    {
