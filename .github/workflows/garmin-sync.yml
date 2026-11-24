@@ -5,8 +5,8 @@ name: Garmin Sync
 
 on:
   schedule:
-    - cron: "17 4 * * *"   # täglich ca. 05:17 Uhr Schweizer Winterzeit
-    - cron: "47 16 * * *"  # und am Abend nach dem Training
+    - cron: "0 11,23 * * *"  # 12:00 und 00:00 Uhr Schweizer Winterzeit (UTC+1)
+    - cron: "0 10,22 * * *"  # 12:00 und 00:00 Uhr Schweizer Sommerzeit (UTC+2)
   workflow_dispatch:
   push:
     branches: [main]
@@ -23,27 +23,39 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
+      - name: Richtige Uhrzeit für die Schweiz?
+        if: github.event_name == 'schedule'
+        run: |
+          off=$(TZ=Europe/Zurich date +%z)
+          if [ "$off" = "+0100" ] && [ "${{ github.event.schedule }}" != "0 11,23 * * *" ]; then echo "Sommerzeit Lauf im Winter, übersprungen"; echo "SKIP=1" >> $GITHUB_ENV; fi
+          if [ "$off" = "+0200" ] && [ "${{ github.event.schedule }}" != "0 10,22 * * *" ]; then echo "Winterzeit Lauf im Sommer, übersprungen"; echo "SKIP=1" >> $GITHUB_ENV; fi
       - name: Zugang prüfen
+        if: env.SKIP != '1'
         env:
           T: ${{ secrets.DATA_REPO_TOKEN }}
         run: |
           if [ -z "$T" ]; then echo "::error::Secret DATA_REPO_TOKEN fehlt. Siehe README."; exit 1; fi
       - uses: actions/checkout@v4
+        if: env.SKIP != '1'
       - uses: actions/checkout@v4
+        if: env.SKIP != '1'
         with:
           repository: jamiro-sys/training-data
           token: ${{ secrets.DATA_REPO_TOKEN }}
           path: private
       - uses: actions/setup-node@v4
+        if: env.SKIP != '1'
         with:
           node-version: 20
       - name: Daten von intervals.icu holen
+        if: env.SKIP != '1'
         env:
           INTERVALS_API_KEY: ${{ secrets.INTERVALS_API_KEY }}
           INTERVALS_ATHLETE_ID: ${{ secrets.INTERVALS_ATHLETE_ID }}
           DATA_DIR: private
         run: node scripts/garmin-sync.mjs
       - name: Im privaten Repository speichern
+        if: env.SKIP != '1'
         working-directory: private
         run: |
           if [ -z "$(git status --porcelain)" ]; then echo "Nichts zu speichern"; exit 0; fi

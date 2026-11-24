@@ -229,7 +229,7 @@ function renderPlan() {
     body = parisCalc();
   } else {
     const cur = phaseOf(t);
-    body = `<div class="phases">${S.plan.phases.map(p => {
+    body = zonesCard() + `<div class="phases">${S.plan.phases.map(p => {
       const wk = p.days.map((ks, i) => `<span><b>${DN[i]}</b>${esc(ks.map(k => sess(k).name).join(" + "))}</span>`).join("");
       return `<article class="phase t-${p.color}${cur && cur.id === p.id ? " now" : ""}"><span class="stripe"></span><div><p class="eyebrow">${cur && cur.id === p.id ? "Jetzt" : (p.to < iso(t) ? "Abgeschlossen" : "Kommt")}</p><h3>${esc(p.name)}</h3><p class="when num">${fmt(pd(p.from))} bis ${fmt(pd(p.to))}</p><p>${esc(p.goal)}</p><div class="wk">${wk}</div></div></article>`;
     }).join("")}</div>`;
@@ -453,7 +453,7 @@ function lastSets(ex) { const l = S.logs.filter(x => x.sets && x.sets[ex] && x.s
 const isStrength = st => /^\d/.test(st.reps) && st.sets > 1 && !/(Min|m |km|s$|s je|Schritte|Wdh in)/.test(st.reps + " ");
 const targetReps = st => (st.reps.match(/\d+/) || [""])[0];
 function timedSec(st) {
-  if (isStrength(st) || /\bbis\b/.test(st.reps)) return 0;
+  if (isStrength(st) || /\d+\s*bis\s*\d+\s*Min/.test(st.reps)) return 0;
   const m = st.reps.match(/(\d+)\s*Min\b/); if (m) return +m[1] * 60;
   const x = st.reps.match(/(\d+)\s*s\b/); return x ? +x[1] : 0;
 }
@@ -885,7 +885,7 @@ function recoveryFor(date) {
   return null;
 }
 function sleepFor(date) {
-  const g = gDay(date); if (g && g.sleepH != null) return { h: g.sleepH, pct: Math.min(100, Math.round(g.sleepH / 8 * 100)) };
+  const tgt = (S.profile && S.profile.sleepTarget) || 8, g = gDay(date); if (g && g.sleepH != null) return { h: g.sleepH, pct: Math.min(100, Math.round(g.sleepH / tgt * 100)) };
   const c = S.checkins[date]; if (c) return { h: null, pct: c.sleep * 20 };
   return null;
 }
@@ -925,7 +925,7 @@ function dialSheet(key) {
       <div class="chart">${barSeries(v, lab, "var(--strain)", 21, x => String(x).replace(".", ","))}</div>${loadCard()}`);
   } else {
     const v = ds.map(d => { const g = gDay(iso(d)); return g && g.sleepH != null ? g.sleepH : null; }), a = avg(v);
-    openSheet(`<div><p class="eyebrow">Schlaf · 14 Tage</p><h2 id="sheetTitle" style="margin-top:8px">${v[13] != null ? hm(v[13]) + " Std" : v[12] != null ? hm(v[12]) + " Std" : "Keine Daten"}</h2><p class="muted">${a != null ? "Schnitt " + hm(a) + " h. " : ""}Ziel 8 Stunden. In Trainingsphasen mit Fussball eher mehr.</p></div>
+    openSheet(`<div><p class="eyebrow">Schlaf · 14 Tage</p><h2 id="sheetTitle" style="margin-top:8px">${v[13] != null ? hm(v[13]) + " Std" : v[12] != null ? hm(v[12]) + " Std" : "Keine Daten"}</h2><p class="muted">${a != null ? "Schnitt " + hm(a) + " h. " : ""}Ziel ${String((S.profile && S.profile.sleepTarget) || 8).replace(".", ",")} Stunden. In Phasen mit Fussball eher mehr.</p></div>
       <div class="chart">${barSeries(v, lab, x => x >= 7.5 ? "var(--sleep)" : x >= 6.5 ? "color-mix(in srgb,var(--sleep) 60%,var(--surface-2))" : "var(--bad)", 10, x => hm(x))}</div>`);
   }
 }
@@ -1143,17 +1143,35 @@ async function privGet(path) {
     if (!r.ok) return null; return JSON.parse(await r.text());
   } catch { return null; }
 }
+/* Persönliche Zonen und Tempi aus profil.json in die Texte einsetzen */
+function applyProfile() {
+  const pr = S.profile; if (!pr || !S.plan || S.plan._personal) return;
+  Object.values(S.plan.sessions).forEach(s => s.blocks.forEach(b => b.items.forEach(it => {
+    const bike = it.ex === "bike" || it.ex === "gymbike", map = bike ? pr.bikeHf : pr.zoneHf;
+    it.reps = it.reps.replace(/Zone (\d)\b(?! \()/g, (m, z) => map && map[z] ? `${m} (Puls ${map[z]})` : m);
+    Object.entries(pr.paceMap || {}).forEach(([k, v]) => { it.reps = it.reps.replace(k, `${k} ${v}`); });
+  })));
+  S.plan._personal = true;
+}
+function zonesCard() {
+  const pr = S.profile; if (!pr) return "";
+  return `<div class="card zones" style="margin-bottom:14px"><div class="card-h"><h3>Deine Zonen</h3><span class="muted" style="font-size:12px">aus Garmin · HFmax ${pr.hfMax}</span></div>
+    <div class="ztab"><div class="zr zh"><span>Zone</span><span>Laufen</span><span>Velo</span></div>${pr.zones.map((z, i) => `<div class="zr"><span><i class="zd" style="--zc:var(--z${i + 1})"></i><b>${esc(z.z)}</b> ${esc(z.name)}</span><span class="num">${esc(pr.zoneHf[i + 1])}</span><span class="num">${esc(pr.bikeHf[i + 1])}</span></div>`).join("")}</div>
+    <div class="items" style="margin-top:12px">${pr.paces.map(x => `<div class="item static"><span class="tx"><b>${esc(x.name)}</b></span><span class="dose">${esc(x.pace)}</span></div>`).join("")}</div>
+    <ul class="znotes">${pr.notes.map(n => `<li>${esc(n)}</li>`).join("")}</ul></div>`;
+}
 async function reloadPrivate() {
-  const [g, c, h] = await Promise.all([privGet("garmin.json"), privGet("coach.json"), privGet("garmin-history.json")]);
-  S.garmin = g; S.coach = c; S.history = h; renderAll();
+  const [g, c, h, pr] = await Promise.all([privGet("garmin.json"), privGet("coach.json"), privGet("garmin-history.json"), privGet("profil.json")]);
+  S.garmin = g; S.coach = c; S.history = h; S.profile = pr; applyProfile(); renderAll();
 }
 async function load(path, fallback) { try { const r = await fetch(path, { cache: "no-cache" }); if (!r.ok) throw 0; return await r.json(); } catch { return fallback; } }
 (async () => {
   applyTheme();
-  const [plan, garmin, coach] = await Promise.all([load("data/plan.json", null), privGet("garmin.json"), privGet("coach.json")]);
+  const [plan, garmin, coach, profile] = await Promise.all([load("data/plan.json", null), privGet("garmin.json"), privGet("coach.json"), privGet("profil.json")]);
+  S.profile = profile;
   privGet("garmin-history.json").then(h => { S.history = h; if (h && S.plan) renderFortschritt(); });
   if (!plan) { $("#v-heute").innerHTML = `<div class="empty"><b>Plan konnte nicht geladen werden.</b><span>Prüfe die Internetverbindung und lade die Seite neu.</span></div>`; return; }
-  S.plan = plan; S.garmin = garmin; S.coach = coach;
+  S.plan = plan; S.garmin = garmin; S.coach = coach; applyProfile();
   window.ExPhotos = Object.fromEntries(Object.entries(plan.exercises).filter(([, e]) => e.photo).map(([k, e]) => [k, { id: e.photo, fit: e.photoFit }]));
   if (S.settings.kneeStage >= plan.kneeStages.length) S.settings.kneeStage = 1;
   renderAll(); route();

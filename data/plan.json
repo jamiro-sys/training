@@ -1,5 +1,5 @@
 {
- "version": 6,
+ "version": 7,
  "updated": "2026-11-24",
  "race": {
   "name": "HYROX Paris Grand Palais",
@@ -21,7 +21,7 @@
    "from": "2026-11-23",
    "to": "2026-12-20",
    "color": "gym",
-   "goal": "Grundkraft an Geräten, Hüfte stark fürs Knie, aerobe Basis auf der Rolle.",
+   "goal": "Nach Marathon und Saisonende: Fitness ruhig wieder aufbauen, Grundkraft an Geräten, Knie stabilisieren.",
    "days": [
     [
      "gA"
@@ -52,7 +52,7 @@
    "from": "2026-12-21",
    "to": "2027-01-03",
    "color": "rest",
-   "goal": "Lockere Wochen. 3 bis 4 Einheiten reichen, Tage frei schieben.",
+   "goal": "Lockere Wochen, 3 bis 4 Einheiten. Schlaf nachholen.",
    "days": [
     [
      "gA"
@@ -114,7 +114,7 @@
    "from": "2027-01-18",
    "to": "2027-02-28",
    "color": "football",
-   "goal": "Fussball 3 mal pro Woche. Samstag Kraft und Stationen, Sonntag lange Ausdauer.",
+   "goal": "Fussball 3 mal pro Woche. Samstag Kraft und Stationen, Sonntag lange Ausdauer in Zone 2.",
    "deload": [
     "2027-02-15"
    ],
@@ -148,7 +148,7 @@
    "from": "2027-03-01",
    "to": "2027-03-28",
    "color": "hyrox",
-   "goal": "Laufen unter Vorbelastung und Simulationen mit dem Partner.",
+   "goal": "Laufen im Hyrox Renntempo unter Vorbelastung, Simulationen mit dem Partner.",
    "deload": [
     "2027-03-22"
    ],
@@ -689,7 +689,7 @@
       {
        "ex": "treadmill",
        "sets": 4,
-       "reps": "800 m Hyrox Tempo",
+       "reps": "800 m im Hyrox Renntempo",
        "rest": 0
       },
       {
@@ -755,7 +755,7 @@
       {
        "ex": "treadmill",
        "sets": 4,
-       "reps": "1 km Hyrox Tempo",
+       "reps": "1 km im Hyrox Renntempo",
        "rest": 120
       }
      ]
@@ -793,7 +793,7 @@
       {
        "ex": "treadmill",
        "sets": 2,
-       "reps": "400 m Renntempo",
+       "reps": "400 m im Hyrox Renntempo",
        "rest": 90
       }
      ]
@@ -850,7 +850,7 @@
    "tag": "Rolle",
    "type": "endurance",
    "dur": 60,
-   "goal": "Aerobe Basis und Fettstoffwechsel, schont das Knie.",
+   "goal": "Aerobe Basis nach Marathon und Saisonende wieder aufbauen. Schont das Knie.",
    "blocks": [
     {
      "title": "Ablauf",
@@ -858,7 +858,7 @@
       {
        "ex": "bike",
        "sets": 1,
-       "reps": "10 Min einrollen"
+       "reps": "10 Min einrollen, Zone 1"
       },
       {
        "ex": "bike",
@@ -873,7 +873,7 @@
      ]
     }
    ],
-   "note": "Wirklich locker. Du sollst danach frischer sein als vorher."
+   "note": "Puls in Zone 2 halten. Du sollst danach frischer sein als vorher."
   },
   "rolleInt": {
    "name": "Intervalle 5 × 4",
@@ -893,7 +893,7 @@
       {
        "ex": "bike",
        "sets": 5,
-       "reps": "4 Min Zone 4 bis 5",
+       "reps": "4 Min Zone 4",
        "rest": 180
       },
       {
@@ -918,7 +918,7 @@
       {
        "ex": "bike",
        "sets": 1,
-       "reps": "45 Min Zone 1 bis 2, 3 × 30 s zügig"
+       "reps": "45 Min Zone 1, 3 × 30 s zügig"
       }
      ]
     }
@@ -942,7 +942,7 @@
       {
        "ex": "treadmill",
        "sets": 1,
-       "reps": "15 bis 20 Min gemäss Knie Stufe"
+       "reps": "15 bis 20 Min gemäss Knie Stufe, Zone 2 Pace"
       }
      ]
     }
@@ -978,7 +978,7 @@
      ]
     }
    ],
-   "note": "Nächste Stufe erst nach zwei Läufen mit maximal 2 von 10 und ohne Schmerz am Morgen danach."
+   "note": "Lockere Läufe in Zone 2. Nächste Stufe erst nach zwei Läufen mit Knie höchstens 2 von 10 und ohne Schmerz am Morgen danach."
   },
   "knie": {
    "name": "Knie Routine",
