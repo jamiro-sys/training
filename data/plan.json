@@ -1134,7 +1134,8 @@
    ],
    "err": "Becken rollt unten ab, Knie fallen nach innen",
    "alt": "Hackenschmidt Maschine",
-   "photo": "Leg_Press"
+   "photo": "Leg_Press",
+   "yt": "gym80 Beinpresse"
   },
   "hipthrust": {
    "name": "Hip Thrust",
@@ -1147,7 +1148,8 @@
    ],
    "err": "Hohlkreuz statt Hüftstreckung",
    "alt": "Glute Bridge am Boden",
-   "photo": "Barbell_Hip_Thrust"
+   "photo": "Barbell_Hip_Thrust",
+   "yt": "gym80 Hip Thrust Maschine"
   },
   "legcurl": {
    "name": "Beinbeuger sitzend",
@@ -1160,7 +1162,8 @@
    ],
    "err": "Schwung, Hüfte hebt ab",
    "alt": "Beinbeuger liegend",
-   "photo": "Seated_Leg_Curl"
+   "photo": "Seated_Leg_Curl",
+   "yt": "gym80 Beinbeuger sitzend"
   },
   "legext": {
    "name": "Beinstrecker",
@@ -1173,7 +1176,8 @@
    ],
    "err": "Zu schwer, Ruck am Anfang",
    "alt": "Weglassen bei Knieschmerz",
-   "photo": "Leg_Extensions"
+   "photo": "Leg_Extensions",
+   "yt": "gym80 Beinstrecker"
   },
   "calfmachine": {
    "name": "Wadenpresse sitzend",
@@ -1186,7 +1190,8 @@
    ],
    "err": "Wippen mit kleinem Bewegungsumfang",
    "alt": "Einbeinig an der Treppe",
-   "photo": "Seated_Calf_Raise"
+   "photo": "Seated_Calf_Raise",
+   "yt": "Wadenheben sitzend Maschine"
   },
   "latpull": {
    "name": "Latzug",
@@ -1276,7 +1281,8 @@
     "Becken bleibt stabil"
    ],
    "err": "Becken dreht mit",
-   "alt": "Ohne Band"
+   "alt": "Ohne Band",
+   "yt": "Clamshell Übung"
   },
   "lateralwalk": {
    "name": "Monster Walk",
@@ -1314,7 +1320,8 @@
     "Knie bleibt über der 2. Zehe"
    ],
    "err": "Knie fällt nach innen",
-   "alt": "Tiefere Stufe"
+   "alt": "Tiefere Stufe",
+   "yt": "Step Down Übung Knie"
   },
   "foamroll": {
    "name": "Faszienrolle Oberschenkel aussen",
@@ -1378,7 +1385,8 @@
     "Hände bis zur Hüfte"
    ],
    "err": "Nur aus den Armen",
-   "alt": "Kabel Pullover"
+   "alt": "Kabel Pullover",
+   "yt": "SkiErg Technik"
   },
   "bike": {
    "name": "Rolle oder Rennrad",
@@ -1416,7 +1424,8 @@
     "Fangen und direkt in die nächste Beuge"
    ],
    "err": "Nicht tief genug",
-   "alt": "Thruster mit Kurzhanteln"
+   "alt": "Thruster mit Kurzhanteln",
+   "yt": "Hyrox Wall Ball Technik"
   },
   "farmers": {
    "name": "Farmers Carry",
@@ -1429,7 +1438,8 @@
    ],
    "err": "Nach vorne lehnen",
    "alt": "Kurzhanteln",
-   "photo": "Farmers_Walk"
+   "photo": "Farmers_Walk",
+   "yt": "Hyrox Farmers Carry Technik"
   },
   "bbj": {
    "name": "Burpee Broad Jumps",
@@ -1441,7 +1451,8 @@
     "Weich landen, direkt weiter"
    ],
    "err": "Hände vor die Füsse setzen",
-   "alt": "Burpee mit kurzem Sprung"
+   "alt": "Burpee mit kurzem Sprung",
+   "yt": "Hyrox Burpee Broad Jump Technik"
   },
   "sblunge": {
    "name": "Sandbag Lunges",
@@ -1454,7 +1465,8 @@
    ],
    "err": "Knie knallt auf",
    "alt": "Reverse Lunges bei Knieschmerz",
-   "photo": "Barbell_Walking_Lunge"
+   "photo": "Barbell_Walking_Lunge",
+   "yt": "Hyrox Sandbag Lunges Technik"
   },
   "sledpush": {
    "name": "Sled Push Ersatz",
@@ -1467,7 +1479,8 @@
    ],
    "err": "Aufrecht schieben",
    "alt": "Vor dem Rennen einmal am echten Sled üben",
-   "photo": "Sled_Push"
+   "photo": "Sled_Push",
+   "yt": "Hyrox Sled Push Technik"
   },
   "sledpull": {
    "name": "Sled Pull Ersatz",
@@ -1479,7 +1492,8 @@
     "Beine arbeiten mit"
    ],
    "err": "Nur aus den Armen",
-   "alt": "Kabelzug rückwärts gehen"
+   "alt": "Kabelzug rückwärts gehen",
+   "yt": "Hyrox Sled Pull Technik"
   },
   "squatmachine": {
    "name": "Squat Maschine",
@@ -1494,7 +1508,8 @@
    "err": "Fersen heben ab, Knie fallen nach innen",
    "alt": "Beinpresse",
    "photo": "Hack_Squat",
-   "photoFit": "contain"
+   "photoFit": "contain",
+   "yt": "gym80 Squat Maschine"
   },
   "legpress1": {
    "name": "Beinpresse einbeinig",
@@ -1508,7 +1523,8 @@
    ],
    "err": "Knie kippt nach innen, Becken dreht",
    "alt": "Step Down",
-   "photo": "Leg_Press"
+   "photo": "Leg_Press",
+   "yt": "Beinpresse einbeinig"
   },
   "cableabd": {
    "name": "Hüftabduktion am Kabelzug",
@@ -1521,7 +1537,8 @@
     "Langsam zurück, 2 s"
    ],
    "err": "Oberkörper kippt, Schwung",
-   "alt": "Monster Walk mit Band"
+   "alt": "Monster Walk mit Band",
+   "yt": "Hüftabduktion Kabelzug"
   },
   "gymbike": {
    "name": "Velo Ergometer",
@@ -1548,7 +1565,8 @@
     "2 Sekunden kontrolliert zurück"
    ],
    "err": "Ellbogen 90 Grad zur Seite, Schultern kommen nach vorne",
-   "alt": "Kurzhantel Bankdrücken auf der Bank"
+   "alt": "Kurzhantel Bankdrücken auf der Bank",
+   "yt": "gym80 Bankdrücken liegend Maschine"
   },
   "seatedrow": {
    "name": "Rudern sitzend Maschine",
@@ -1562,7 +1580,8 @@
     "Langsam nach vorne, Schultern bleiben unten"
    ],
    "err": "Mit dem Oberkörper Schwung holen",
-   "alt": "Rudern am Kabelturm"
+   "alt": "Rudern am Kabelturm",
+   "yt": "gym80 Rudern sitzend"
   },
   "lateralmachine": {
    "name": "Seitheben Maschine",
@@ -1576,7 +1595,8 @@
     "Nacken locker, Schultern nicht hochziehen"
    ],
    "err": "Zu schwer, Schultern ziehen zu den Ohren",
-   "alt": "Seitheben mit Kurzhanteln oder am Kabel"
+   "alt": "Seitheben mit Kurzhanteln oder am Kabel",
+   "yt": "gym80 Seitheben Maschine"
   },
   "inclinefly": {
    "name": "Butterfly schräg",
@@ -1590,7 +1610,8 @@
     "Weit öffnen bis leichte Dehnung, nicht weiter"
    ],
    "err": "Arme zu stark beugen, dann wird es ein Drücken",
-   "alt": "Kabel Crossover von unten nach oben"
+   "alt": "Kabel Crossover von unten nach oben",
+   "yt": "gym80 Butterfly schräg"
   },
   "reversefly": {
    "name": "Reverse Butterfly",
@@ -1604,7 +1625,8 @@
     "Langsam zurück"
    ],
    "err": "Mit Schwung arbeiten, zu schwer",
-   "alt": "Face Pull am Kabel"
+   "alt": "Face Pull am Kabel",
+   "yt": "gym80 Reverse Butterfly"
   },
   "szcurl": {
    "name": "Bizeps Curl mit SZ Stange",
@@ -1618,7 +1640,8 @@
     "Langsam fast ganz strecken"
    ],
    "err": "Arme ruckartig ganz durchstrecken",
-   "alt": "Kurzhantel Curl"
+   "alt": "Kurzhantel Curl",
+   "yt": "Scottcurl SZ Stange"
   },
   "pushdown": {
    "name": "Trizepsdrücken am Kabel",

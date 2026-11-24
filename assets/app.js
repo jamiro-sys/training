@@ -376,6 +376,7 @@ function exerciseSheet(id) {
   const H = exHistory(id), hv = H.map(h => Math.round(h.best.v)), best = H.length ? H.reduce((x, y) => y.best.v > x.best.v ? y : x) : null;
   const histChart = H.length >= 2 ? `<div class="chart"><p class="block-t">Kraftverlauf (geschätztes Maximum)</p>${lineChart(H.slice(-20).map(h => ({ v: Math.round(h.best.v), l: fmt(pd(h.date)) })), { min: Math.floor(Math.min(...hv) * .9), max: Math.ceil(Math.max(...hv) * 1.05), color: "var(--accent)", label: "Kraftverlauf", unit: " kg" })}</div>` : "";
   openSheet(`<div class="anim t-${CAT_TYPE[e.cat] || "rest"}" data-anim="${id}"></div><div><p class="eyebrow">${esc(e.cat)} · ${esc(e.equip)}</p><h2 id="sheetTitle" style="margin-top:8px">${esc(e.name)}</h2></div>
+    <a class="btn ghost block" href="https://www.youtube.com/results?search_query=${encodeURIComponent((e.yt || e.name) + " Ausführung")}" target="_blank" rel="noopener">${ICON.play} Video ansehen</a>
     <div><p class="block-t">So gehts</p><ol class="howlist">${e.how.map(h => `<li>${esc(h)}</li>`).join("")}</ol></div>
     <div class="callout t-gym"><b>Typischer Fehler:</b> ${esc(e.err)}</div>
     <div><p class="block-t">Alternative</p><p>${esc(e.alt)}</p></div>

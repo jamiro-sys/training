@@ -1,5 +1,5 @@
 // Offline Cache: App Hülle aus dem Cache, Daten immer zuerst aus dem Netz.
-const C = "pp27-v5";
+const C = "pp27-v6";
 const SHELL = ["./", "index.html", "assets/styles.css", "assets/app.js", "assets/anim.js", "assets/icon.svg", "manifest.webmanifest"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(C).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== C).map(x => caches.delete(x))))); self.clients.claim(); });
