@@ -344,7 +344,7 @@ textarea.input{height:auto;padding:12px 14px;resize:vertical;min-height:70px}
 .p-li .ck{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;flex:none;background:var(--surface-2);font:700 12px/1 var(--f-mono);color:var(--muted)}
 .p-li .ck.on{background:var(--good);color:var(--bg)}.p-li .ck svg{width:15px;height:15px;stroke-width:2.6}
 .p-li .tx{min-width:0}.p-li b{display:block;font-weight:600}.p-li .tx span{font-size:12.5px;color:var(--muted)}
-.anim-btn{all:unset;box-sizing:border-box;cursor:zoom-in}
+.anim-btn{border:0;padding:0;margin:0;font:inherit;color:inherit;cursor:zoom-in}
 .anim-btn:focus-visible{outline:2px solid var(--accent)}
 .hint{font-size:12.5px;color:var(--muted)}
 .up-next{display:flex;flex-direction:column;gap:4px;padding:14px;border-radius:var(--r-s);background:color-mix(in srgb,var(--c) 12%,var(--surface))}
@@ -353,3 +353,71 @@ textarea.input{height:auto;padding:12px 14px;resize:vertical;min-height:70px}
 .rest.work{background:color-mix(in srgb,var(--c) 18%,var(--bg))}
 .stack{display:flex;flex-direction:column;gap:10px}
 .p-foot #pPrev{flex:0 0 56px;padding:0}
+
+/* ===== Design Update ===== */
+body{background:radial-gradient(120% 60% at 100% -10%,color-mix(in srgb,var(--accent) 9%,transparent),transparent 60%),var(--bg);background-attachment:fixed}
+.card{background:linear-gradient(180deg,color-mix(in srgb,var(--surface) 100%,transparent),var(--surface));box-shadow:0 1px 0 color-mix(in srgb,var(--fg) 4%,transparent) inset}
+.head h1{letter-spacing:-.03em}
+/* Schwebende Tab Bar auf dem Handy */
+@media (max-width:899px){
+  .rail{left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 10px);height:64px;padding:0 6px;border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow)}
+  .rail a{border-radius:16px;margin:6px 0}
+  .rail a[aria-current="page"]{background:var(--surface-2)}
+  .main{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px) + 40px)}
+  .toast{bottom:calc(env(safe-area-inset-bottom,0px) + 86px)}
+}
+.actions .grow{flex:1}
+.thumbs{display:flex;align-items:center}
+.thumbs img{width:46px;height:46px;border-radius:14px;object-fit:cover;border:2px solid var(--surface);margin-right:-10px;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+.thumbs span{margin-left:16px;font:600 13px/1 var(--f-mono);color:var(--muted)}
+.coach-card{background:linear-gradient(120deg,color-mix(in srgb,var(--hyrox) 12%,var(--surface)),var(--surface) 60%)}
+.form-tip{margin-top:12px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--c) 14%,transparent);color:var(--fg);font-weight:600;font-size:14px}
+.link{all:unset;cursor:pointer;color:var(--accent);font-weight:600;font-size:13px}
+.ci{margin-bottom:12px}.ci>span{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.scale.s5{grid-template-columns:repeat(5,minmax(0,1fr))}
+.scale.s5 button{height:40px}
+.scale button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+/* Übungsfotos */
+.anim.has-photo{background:#0d0e10}
+.ph{position:absolute;inset:0}
+.ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ph img.b{animation:xfade 3s ease-in-out infinite}
+@keyframes xfade{0%,30%{opacity:0}45%,80%{opacity:1}95%,100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.ph img.b{animation:none;opacity:0}}
+.anim-toggle{position:absolute;right:10px;bottom:10px;height:30px;padding:0 12px;border:0;border-radius:99px;background:rgba(10,11,13,.72);color:#fff;font:600 12px/30px var(--f-body);backdrop-filter:blur(8px);cursor:pointer}
+.exitem .ic.anim-mini.has-photo{padding:0;overflow:hidden}
+.exitem .ic.anim-mini img{width:100%;height:100%;object-fit:cover;display:block}
+.exitem .ic.anim-mini{width:72px;height:54px;border-radius:12px}
+/* Gewichtsvorschlag */
+.sug{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:var(--r-s);background:var(--surface);border:1px solid var(--line)}
+.sug b{font:800 22px/1.1 var(--f-display)}
+.sug span{font-size:12.5px;color:var(--muted)}
+.sug.up{border-color:color-mix(in srgb,var(--good) 50%,var(--line));background:color-mix(in srgb,var(--good) 10%,var(--surface))}
+.sug.up b{color:var(--good)}
+.pr-banner{display:flex;flex-direction:column;gap:6px;padding:16px;border-radius:var(--r);background:linear-gradient(120deg,color-mix(in srgb,var(--gym) 30%,var(--surface)),var(--surface));border:1px solid color-mix(in srgb,var(--gym) 50%,var(--line))}
+.pr-banner b{font:800 20px/1.15 var(--f-display)}
+/* Zeitrechner */
+.hx-t{margin:6px 0 10px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:8px;border-radius:99px;background:var(--surface-2);outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:var(--accent);border:4px solid var(--surface);box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--accent);border:4px solid var(--surface)}
+.splits{display:flex;flex-direction:column}
+.split{display:grid;grid-template-columns:38px 1fr auto 64px;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.split:last-child{border-bottom:0}
+.split .no{font-size:11.5px;color:var(--muted)}
+.split.run .tx{color:var(--muted)}
+.split:not(.run) .tx{font-weight:600}
+.split .num:last-child{text-align:right;font-size:12.5px}
+/* Heatmap */
+.heat{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px}
+.hm-col{display:grid;grid-template-rows:repeat(7,1fr);gap:4px}
+.heat i,.heat-l i{display:block;aspect-ratio:1;border-radius:4px;background:var(--surface-2)}
+.heat i.l-1{background:transparent;border:1px dashed var(--line)}
+.heat i.l1,.heat-l i.l1{background:color-mix(in srgb,var(--accent) 35%,var(--surface-2))}
+.heat i.l2,.heat-l i.l2{background:color-mix(in srgb,var(--accent) 65%,var(--surface-2))}
+.heat i.l3,.heat-l i.l3{background:var(--accent)}
+.heat-l{display:flex;align-items:center;gap:5px;justify-content:flex-end;margin-top:10px;font-size:11.5px;color:var(--muted)}
+.heat-l i{width:12px}
+.anim{flex-shrink:0}
+.head{flex-wrap:wrap}
+.sheet-close{z-index:3}

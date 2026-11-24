@@ -201,11 +201,26 @@ const live = new Set();
 const reduce = matchMedia("(prefers-reduced-motion: reduce)");
 function svgFor(id, t, still) { return `<svg viewBox="0 0 240 176" role="img" aria-label="Animation ${id}">${draw(id, t, still)}</svg>`; }
 function mount(el) {
-  const id = el.dataset.anim; if (!A[id]) { el.hidden = true; return; }
-  el.innerHTML = svgFor(id, 0, true) + (A[id].note ? `<span class="anim-note">${A[id].note}</span>` : "");
-  if (el.dataset.still !== undefined) return;
+  const id = el.dataset.anim, ph = (window.ExPhotos || {})[id];
+  const still = el.dataset.still !== undefined;
+  if (ph && el.dataset.mode !== "figur") {
+    const src = n => `assets/ex/${ph.id}-${n}.jpg`, fit = ph.fit ? ` style="object-fit:${ph.fit}"` : "";
+    el.classList.add("has-photo");
+    el.innerHTML = still ? `<img src="${src(0)}" alt="" loading="lazy" decoding="async">`
+      : `<div class="ph"><img src="${src(0)}" alt=""${fit} decoding="async"><img class="b" src="${src(1)}" alt=""${fit} decoding="async"></div>` + (A[id] && el.tagName !== "BUTTON" ? `<button class="anim-toggle" data-animtoggle>Als Figur</button>` : "");
+    return;
+  }
+  el.classList.remove("has-photo");
+  if (!A[id]) { el.hidden = true; return; }
+  el.innerHTML = svgFor(id, 0, true) + (A[id].note ? `<span class="anim-note">${A[id].note}</span>` : "") + (ph && el.tagName !== "BUTTON" ? `<button class="anim-toggle" data-animtoggle>Als Foto</button>` : "");
+  if (still) return;
   live.add(el); if (live.size === 1) requestAnimationFrame(loop);
 }
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-animtoggle]"); if (!b) return;
+  e.stopPropagation();
+  const el = b.closest("[data-anim]"); el.dataset.mode = el.dataset.mode === "figur" ? "foto" : "figur"; live.delete(el); mount(el);
+});
 let t0 = performance.now();
 function loop(now) {
   for (const el of live) {

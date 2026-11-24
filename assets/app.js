@@ -42,7 +42,9 @@ const store = {
 const S = {
   plan: null, garmin: null, coach: null,
   logs: store.get("logs", []),
-  settings: Object.assign({ kneeStage: 1, raceDate: null, theme: "system" }, store.get("settings", {})),
+  body: store.get("body", []),
+  checkins: store.get("checkins", {}),
+  settings: Object.assign({ kneeStage: 1, raceDate: null, theme: "system", targetMin: 80 }, store.get("settings", {})),
   week: monday(now()), planMode: "woche", exCat: "Alle", exQ: ""
 };
 const saveLogs = () => store.set("logs", S.logs);
@@ -75,6 +77,40 @@ function toast(t) { const el = $("#toast"); el.textContent = t; el.hidden = fals
 const greeting = () => { const h = new Date().getHours(); return h < 11 ? "Guten Morgen" : h < 17 ? "Hallo" : "Guten Abend"; };
 const kneeColor = v => v == null ? "var(--rest)" : v <= 2 ? "var(--good)" : v <= 4 ? "var(--warn)" : "var(--bad)";
 
+/* ---------- Kraftwerte, Rekorde, Tagesform ---------- */
+const num = v => { const n = parseFloat(String(v ?? "").replace(",", ".")); return Number.isFinite(n) ? n : 0; };
+const e1rm = (w, r) => w > 0 && r > 0 ? w * (1 + Math.min(r, 15) / 30) : 0;
+function exHistory(id) {
+  return S.logs.filter(l => l.sets && l.sets[id]).map(l => {
+    const best = l.sets[id].reduce((b, x) => { const v = e1rm(num(x.w), num(x.r)); return v > b.v ? { v, w: num(x.w), r: num(x.r) } : b; }, { v: 0 });
+    return { date: l.date, rpe: l.rpe, sets: l.sets[id], best };
+  }).filter(h => h.best.v > 0).sort((a, b) => a.date.localeCompare(b.date));
+}
+const fmtKg = v => String(Math.round(v * 2) / 2).replace(".", ",");
+/* Doppelte Progression: alle Sätze am oberen Ende der Wdh Spanne und RPE höchstens 8, dann mehr Gewicht */
+function suggest(st) {
+  const h = exHistory(st.ex); const last = h[h.length - 1]; if (!last) return null;
+  const top = parseInt((st.reps.match(/\d+/g) || []).pop()) || 0;
+  const ws = last.sets.map(x => num(x.w)).filter(Boolean); if (!ws.length || !top) return null;
+  const w = Math.max(...ws);
+  const allTop = last.sets.length >= (st.sets || 1) && last.sets.every(x => num(x.r) >= top);
+  const e = S.plan.exercises[st.ex];
+  const step = e && e.cat === "Beine" && /Gerät/.test(e.equip) ? 5 : 2.5;
+  if (allTop && (last.rpe == null || last.rpe <= 8)) return { w: w + step, up: step, text: `+${fmtKg(step)} kg, letztes Mal alle Sätze geschafft` };
+  return { w, up: 0, text: "Gewicht halten, Wiederholungen steigern" };
+}
+/* Tagesform: Garmin wenn aktuell, sonst eigener Check in */
+function readinessToday() {
+  const today = iso(now());
+  const g = S.garmin && S.garmin.readiness;
+  if (g && g.score != null && (!g.date || g.date >= iso(addD(now(), -1)))) return { src: "garmin", score: g.score, g };
+  const c = S.checkins[today];
+  if (c) return { src: "check", score: Math.round(((c.sleep + c.energy + (6 - c.sore)) - 3) / 12 * 100), c };
+  return null;
+}
+const scoreCol = v => v >= 70 ? "var(--good)" : v >= 45 ? "var(--warn)" : "var(--bad)";
+const scoreTxt = v => v >= 70 ? "Bereit für Vollgas" : v >= 45 ? "Normal trainieren" : "Heute leichter machen";
+
 /* ---------- Heute ---------- */
 function renderHeute() {
   const t = now(), p = phaseOf(t), rd = pd(raceDate());
@@ -84,55 +120,48 @@ function renderHeute() {
   const done = isDone(iso(t), main);
   const left = Math.max(0, days(t, rd));
   const extra = list.filter(k => k !== main).map(k => sess(k).name);
-  // Nächstes Training, falls heute frei oder schon erledigt
   let nextD = null, nextK = null;
   if (!s.dur || done) for (let i = 1; i <= 7 && !nextK; i++) { const d = addD(t, i); const k = sessionsFor(d).find(x => sess(x).dur); if (k) { nextD = d; nextK = k; } }
   const pend = pendingPlayer();
+  const nEx = s.blocks.reduce((a, b) => a + b.items.length, 0);
+  const photos = [...new Set(s.blocks.flatMap(b => b.items.map(i => i.ex)).filter(x => x && window.ExPhotos && window.ExPhotos[x]))].slice(0, 4);
 
-  // Phasenfortschritt
   const ph = S.plan.phases.filter(x => x.from <= raceDate());
-  const track = ph.map(x => {
-    const a = pd(x.from), b = pd(x.to), tot = days(a, b) + 1, pr = Math.max(0, Math.min(1, (days(a, t) + 1) / tot));
-    return `<span class="t-${x.color}" title="${esc(x.name)}"><i style="width:${(t < a ? 0 : pr) * 100}%"></i></span>`;
-  }).join("");
+  const track = ph.map(x => { const a = pd(x.from), b = pd(x.to), tot = days(a, b) + 1, pr = Math.max(0, Math.min(1, (days(a, t) + 1) / tot)); return `<span class="t-${x.color}" title="${esc(x.name)}"><i style="width:${(t < a ? 0 : pr) * 100}%"></i></span>`; }).join("");
 
-  // Garmin
-  const g = S.garmin && S.garmin.readiness;
-  const gUpdated = S.garmin && S.garmin.updated;
-  let readiness;
-  if (g && g.score != null) {
-    const col = g.score >= 70 ? "var(--good)" : g.score >= 45 ? "var(--warn)" : "var(--bad)";
-    readiness = `<div class="card"><div class="card-h"><h3>Bereitschaft</h3><span class="pill">${esc(g.label || "Garmin")}</span></div>
-      <div class="ring-wrap"><div class="ring">${ring(g.score / 100, col)}<div class="v"><div><b>${g.score}</b><span>von 100</span></div></div></div>
-      <div class="kv">
-        <div><b class="num">${g.hrv ?? "-"}</b><span>HRV ms</span></div>
-        <div><b class="num">${g.restingHr ?? "-"}</b><span>Ruhepuls</span></div>
-        <div><b class="num">${g.sleepH ?? "-"}</b><span>Schlaf h</span></div>
-        <div><b class="num">${g.bodyBattery ?? "-"}</b><span>Body Battery</span></div>
-      </div></div>
-      ${gUpdated ? `<p class="muted" style="font-size:12px;margin-top:12px">Stand ${esc(new Date(gUpdated).toLocaleString("de-CH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</p>` : ""}</div>`;
+  // Tagesform
+  const r = readinessToday();
+  let form;
+  if (r) {
+    const kv = r.src === "garmin"
+      ? `<div><b class="num">${r.g.hrv ?? "-"}</b><span>HRV ms</span></div><div><b class="num">${r.g.restingHr ?? "-"}</b><span>Ruhepuls</span></div><div><b class="num">${r.g.sleepH ?? "-"}</b><span>Schlaf h</span></div><div><b class="num">${r.g.bodyBattery ?? "-"}</b><span>Body Battery</span></div>`
+      : `<div><b class="num">${r.c.sleep}/5</b><span>Schlaf</span></div><div><b class="num">${r.c.energy}/5</b><span>Energie</span></div><div><b class="num">${r.c.sore}/5</b><span>Muskelkater</span></div><div><button class="link" data-checkin="edit">Ändern</button></div>`;
+    form = `<div class="card"><div class="card-h"><h3>Tagesform</h3><span class="pill">${r.src === "garmin" ? "Garmin" : "Check in"}</span></div>
+      <div class="ring-wrap"><div class="ring">${ring(r.score / 100, scoreCol(r.score))}<div class="v"><div><b>${r.score}</b><span>von 100</span></div></div></div><div class="kv">${kv}</div></div>
+      <p class="form-tip" style="--c:${scoreCol(r.score)}">${scoreTxt(r.score)}${r.score < 45 && s.dur ? ". Kürze heute jede Übung um einen Satz." : ""}</p></div>`;
   } else {
-    readiness = `<div class="card"><div class="card-h"><h3>Bereitschaft</h3><span class="pill">Garmin</span></div>
-      <div class="ring-wrap"><div class="ring">${ring(0, "var(--faint)")}<div class="v"><div><b class="muted">?</b><span>offen</span></div></div></div>
-      <p class="muted">Sobald Garmin über intervals.icu verbunden ist, siehst du hier jeden Morgen HRV, Ruhepuls, Schlaf und deine Tagesform.</p></div></div>`;
+    const scale = (k, l, lo, hi) => `<div class="ci"><span>${l}</span><div class="scale s5" data-ci="${k}">${[1, 2, 3, 4, 5].map(v => `<button data-v="${v}" aria-label="${l} ${v} von 5">${v}</button>`).join("")}</div><div class="scale-l"><span>${lo}</span><span>${hi}</span></div></div>`;
+    form = `<div class="card"><div class="card-h"><h3>Wie fühlst du dich?</h3><span class="pill">10 Sek</span></div>
+      ${scale("sleep", "Schlaf", "schlecht", "super")}${scale("energy", "Energie", "leer", "voll")}${scale("sore", "Muskelkater", "keiner", "stark")}
+      <p class="muted" style="font-size:12.5px;margin-top:10px">Ersetzt die Garmin Werte, bis intervals.icu verbunden ist.</p></div>`;
   }
 
-  // Woche
   const ws = monday(t);
   const strip = DN.map((dn, i) => {
     const d = addD(ws, i), ks = sessionsFor(d);
     const dots = ks.filter(k => sess(k).dur || k === "race").map(k => `<i class="t-${sess(k).type}${isDone(iso(d), k) ? " done" : ""}"></i>`).join("");
     return `<button class="${iso(d) === iso(t) ? "today" : ""}" data-day="${iso(d)}" aria-label="${DL[i]} ${fmt(d)}"><span class="d">${dn}</span><span class="n">${d.getDate()}</span><span class="dots">${dots}</span></button>`;
   }).join("");
-
-  const coach = S.coach && S.coach.message ? `<div class="card span"><div class="coach"><div class="av" aria-hidden="true"></div><div><p>${esc(S.coach.message)}</p><p class="when">Coach Notiz · ${esc(S.coach.updated ? fmt(new Date(S.coach.updated)) : "")}</p></div></div></div>` : "";
+  const weekDone = S.logs.filter(l => l.date >= iso(ws) && l.date <= iso(addD(ws, 6))).length;
+  const weekPlan = DN.reduce((a, _, i) => a + sessionsFor(addD(ws, i)).filter(k => sess(k).dur && sess(k).type !== "rest").length, 0);
+  const coach = S.coach && S.coach.message ? `<div class="card span coach-card"><div class="coach"><div class="av" aria-hidden="true"></div><div><p class="eyebrow" style="margin-bottom:6px">Coach · ${esc(S.coach.updated ? fmt(new Date(S.coach.updated)) : "")}</p><p>${esc(S.coach.message)}</p></div></div></div>` : "";
   const ks = S.plan.kneeStages[S.settings.kneeStage];
 
   $("#v-heute").innerHTML = `
-    <header class="head"><div><p class="eyebrow">${DL[wd(t)]}, ${fmt(t)} · KW ${kw(t)}</p><h1 id="h-heute">${greeting()}</h1></div>
+    <header class="head"><div><p class="eyebrow">${DL[wd(t)]}, ${fmt(t)} · KW ${kw(t)}${p ? " · " + esc(p.name) : ""}</p><h1 id="h-heute">${greeting()}</h1></div>
       <button class="icon-btn" data-open="settings" aria-label="Einstellungen"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button></header>
     ${pend ? `<div class="banner t-${sess(pend.k).type}"><span class="dot"></span><div class="tx"><b>Training läuft: ${esc(sess(pend.k).name)}</b><span>Übung ${pend.i + 1} von ${sess(pend.k).blocks.reduce((a, b) => a + b.items.length, 0)}</span></div><button class="btn accent small" data-resume>Fortsetzen</button><button class="icon-btn" data-resume="drop" aria-label="Laufendes Training verwerfen">${ICON.close}</button></div>` : ""}
-    ${!S.settings.introDone ? `<div class="card intro"><div class="card-h"><h3>So funktioniert die App</h3></div><ol class="howlist"><li><span><b>Training starten</b> führt dich Übung für Übung durch. Haken setzen, die Pause läuft automatisch.</span></li><li><span><b>Kilos</b> von letzter Woche sind schon eingetragen. Du passt nur an, was sich ändert.</span></li><li><span><b>Nach dem Training</b> Anstrengung und Knie bewerten. Daraus passe ich den Plan an.</span></li><li><span>Tippe auf einen <b>Tag in der Woche</b> oder eine <b>Animation</b>, um Details zu sehen.</span></li></ol><button class="btn primary small" data-intro style="margin-top:14px">Verstanden</button></div>` : ""}
+    ${!S.settings.introDone ? `<div class="card intro"><div class="card-h"><h3>So funktioniert die App</h3></div><ol class="howlist"><li><span><b>Training starten</b> führt dich Übung für Übung durch. Haken setzen, die Pause läuft automatisch.</span></li><li><span><b>Gewichte</b> werden vorgeschlagen. Schaffst du alle Wiederholungen, legt die App automatisch drauf.</span></li><li><span><b>Nach dem Training</b> Anstrengung und Knie bewerten. Daraus passe ich den Plan an.</span></li><li><span>Tippe auf einen <b>Tag in der Woche</b> oder ein <b>Übungsbild</b>, um Details zu sehen.</span></li></ol><button class="btn primary small" data-intro style="margin-top:14px">Verstanden</button></div>` : ""}
     <div class="grid today">
       <article class="hero t-${s.type}">
         ${done ? `<span class="pill good done-badge">${ICON.check.replace("<svg", '<svg style="width:14px;height:14px"')} Erledigt</span>` : ""}
@@ -140,27 +169,29 @@ function renderHeute() {
         <h2>${esc(s.name)}</h2>
         <p class="goal">${esc(s.goal)}</p>
         ${extra.length ? `<p class="muted" style="font-size:13px">Dazu: ${esc(extra.join(", "))}</p>` : ""}
+        ${photos.length ? `<div class="thumbs" aria-hidden="true">${photos.map(x => `<img src="assets/ex/${window.ExPhotos[x].id}-0.jpg" alt="" loading="lazy">`).join("")}${nEx > photos.length ? `<span>+${nEx - photos.length}</span>` : ""}</div>` : ""}
         <div class="meta">
           ${s.dur ? `<div><b class="num">${s.dur}</b><span>Minuten</span></div>` : ""}
-          ${s.blocks.length ? `<div><b class="num">${s.blocks.reduce((a, b) => a + b.items.length, 0)}</b><span>Übungen</span></div>` : ""}
+          ${nEx ? `<div><b class="num">${nEx}</b><span>Übungen</span></div>` : ""}
           <div><b>${esc(TYPE[s.type])}</b><span>Typ</span></div>
         </div>
         <div class="actions">
-          ${s.blocks.length && s.dur && !pend ? `<button class="btn ${done ? "ghost" : "accent"}" data-start="${main}" data-date="${iso(t)}">${ICON.play} ${done ? "Nochmals" : "Training starten"}</button>` : ""}
+          ${s.blocks.length && s.dur && !pend ? `<button class="btn ${done ? "ghost" : "accent"} grow" data-start="${main}" data-date="${iso(t)}">${ICON.play} ${done ? "Nochmals" : "Training starten"}</button>` : ""}
           <button class="btn ghost" data-sess="${main}" data-date="${iso(t)}">Details</button>
         </div>
         ${nextK ? `<button class="next-up" data-sess="${nextK}" data-date="${iso(nextD)}"><span class="eyebrow">Nächstes Training</span><b>${days(t, nextD) === 1 ? "Morgen" : DL[wd(nextD)]} · ${esc(sess(nextK).name)}</b><span class="muted">${esc(sess(nextK).tag)} · ${sess(nextK).dur} Min</span></button>` : ""}
       </article>
       <div class="grid">
-        ${readiness}
-        <div class="card t-accent"><div class="card-h"><h3>Paris</h3><span class="pill accent">${esc(S.plan.race.division)}</span></div>
+        ${form}
+        <div class="card t-accent paris"><div class="card-h"><h3>Paris</h3><button class="pill accent" data-goto="paris">Zeitrechner</button></div>
           <div style="display:flex;align-items:flex-end;gap:12px"><span class="big-num num">${left}</span><span class="muted" style="padding-bottom:8px">Tage bis zum Start<br>${fmt(rd)} ${rd.getFullYear()}</span></div>
           <div class="phase-track">${track}</div>
           <div class="phase-labels"><span>${p ? esc(p.name) : "Plan"}</span><span>${p ? "bis " + fmt(pd(p.to)) : ""}</span></div>
         </div>
       </div>
       ${coach}
-      <div class="card span"><div class="card-h"><h3>Diese Woche</h3><span class="muted" style="font-size:13px">${S.logs.filter(l => l.date >= iso(ws) && l.date <= iso(addD(ws, 6))).length} erledigt${isDeload(t) ? " · Entlastungswoche" : ""}</span></div><div class="strip">${strip}</div></div>
+      <div class="card span"><div class="card-h"><h3>Diese Woche</h3><span class="muted num" style="font-size:13px">${weekDone} / ${weekPlan}${isDeload(t) ? " · Entlastung" : ""}</span></div>
+        <div class="progress" style="margin:-4px 0 14px"><span style="width:${Math.min(100, weekPlan ? weekDone / weekPlan * 100 : 0)}%;background:var(--accent)"></span></div><div class="strip">${strip}</div></div>
       <div class="card span"><div class="card-h"><h3>Knie Stufe</h3><button class="btn ghost small" data-open="knee">Alle Stufen</button></div>
         <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
           <div class="stepper"><button class="icon-btn" data-knee="-1" aria-label="Stufe runter">${ICON.minus}</button><b class="num">${S.settings.kneeStage}</b><button class="icon-btn" data-knee="1" aria-label="Stufe rauf">${ICON.plus}</button></div>
@@ -188,6 +219,8 @@ function renderPlan() {
       ${p ? `<p class="muted" style="margin-bottom:12px">${esc(p.goal)}</p>` : ""}
       ${isDeload(ws) ? `<div class="callout deload t-gym"><b>Entlastungswoche.</b> Gym und Ausdauer mit 40 Prozent weniger Volumen. Fussball normal.</div>` : ""}
       <div class="days">${rows}</div>`;
+  } else if (S.planMode === "paris") {
+    body = parisCalc();
   } else {
     const cur = phaseOf(t);
     body = `<div class="phases">${S.plan.phases.map(p => {
@@ -196,7 +229,23 @@ function renderPlan() {
     }).join("")}</div>`;
   }
   $("#v-plan").innerHTML = `<header class="head"><div><p class="eyebrow">Mitte Januar Fussball · April Paris</p><h1>Plan</h1></div>
-    <div class="seg" role="group" aria-label="Ansicht"><button data-mode="woche" aria-pressed="${S.planMode === "woche"}">Woche</button><button data-mode="phasen" aria-pressed="${S.planMode === "phasen"}">Phasen</button></div></header>${body}`;
+    <div class="seg" role="group" aria-label="Ansicht"><button data-mode="woche" aria-pressed="${S.planMode === "woche"}">Woche</button><button data-mode="phasen" aria-pressed="${S.planMode === "phasen"}">Phasen</button><button data-mode="paris" aria-pressed="${S.planMode === "paris"}">Paris</button></div></header>${body}`;
+}
+
+/* Hyrox Doubles Zeitrechner: Vorlage 1:15:30, wird auf die Zielzeit skaliert */
+const HX = [["Lauf", 300, "run"], ["SkiErg 1000 m", 225], ["Lauf", 300, "run"], ["Sled Push 50 m", 180], ["Lauf", 300, "run"], ["Sled Pull 50 m", 240], ["Lauf", 300, "run"], ["Burpee Broad Jumps 80 m", 210], ["Lauf", 300, "run"], ["Rudern 1000 m", 240], ["Lauf", 300, "run"], ["Farmers Carry 200 m", 105], ["Lauf", 300, "run"], ["Sandbag Lunges 100 m", 240], ["Lauf", 300, "run"], ["Wall Balls 100", 330]];
+const HX_ROX = 360, HX_BASE = HX.reduce((a, x) => a + x[1], 0) + HX_ROX;
+const hms = s => { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(x).padStart(2, "0"); };
+function parisCalc() {
+  const target = S.settings.targetMin * 60, k = target / HX_BASE;
+  const pace = 300 * k, runT = 8 * pace, stT = HX.filter(x => !x[2]).reduce((a, x) => a + x[1] * k, 0);
+  let acc = 0;
+  const rows = HX.map(([n, sec, run], i) => { acc += sec * k + HX_ROX * k / 16; return `<div class="split${run ? " run" : ""}"><span class="no num">${run ? "R" + (i / 2 + 1) : "S" + Math.ceil(i / 2)}</span><span class="tx">${esc(n)}${run ? " 1 km" : ""}</span><span class="num">${hms(sec * k)}</span><span class="num muted">${hms(acc)}</span></div>`; }).join("");
+  return `<div class="card hx"><p class="eyebrow">Zielzeit Doubles</p><div class="hx-t"><b class="big-num num" id="hxOut">${hms(target)}</b></div>
+    <input type="range" id="hxRange" min="60" max="110" step="1" value="${S.settings.targetMin}" aria-label="Zielzeit in Minuten">
+    <div class="kv" style="margin-top:14px"><div><b class="num">${hms(pace)}</b><span>Pace pro km</span></div><div><b class="num">${hms(runT)}</b><span>8 km Laufen</span></div><div><b class="num">${hms(stT)}</b><span>Stationen</span></div><div><b class="num">${hms(HX_ROX * k)}</b><span>Roxzone Wechsel</span></div></div></div>
+    <div class="card" style="margin-top:14px"><div class="card-h"><h3>Splits</h3><span class="muted" style="font-size:12px">Zeit · kumuliert</span></div><div class="splits">${rows}</div>
+    <p class="muted" style="font-size:12.5px;margin-top:12px">Richtwerte für Doubles: Ihr lauft beide jeden Kilometer, die Stationen teilt ihr. Im Training siehst du an deiner Laufpace, ob die Zielzeit realistisch ist.</p></div>`;
 }
 
 /* ---------- Übungen ---------- */
@@ -260,6 +309,20 @@ function renderFortschritt() {
     : `<div class="empty span"><b>Garmin Daten folgen.</b><span>So verbindest du Garmin:</span><ol><li>Gratis Konto auf intervals.icu erstellen und Garmin verbinden.</li><li>API Key und Athleten ID als GitHub Secrets hinterlegen.</li><li>Ab dann holt die Seite die Werte jeden Morgen und Abend automatisch.</li></ol></div>`;
 
   const acts = ((S.garmin && S.garmin.activities) || []).slice(0, 8);
+  // Körpergewicht
+  const B = S.body.slice().sort((a, b) => a.date.localeCompare(b.date));
+  const bPts = B.slice(-30).map(x => ({ v: x.kg, l: fmt(pd(x.date)) }));
+  const bLast = B[B.length - 1], b4 = B.filter(x => x.date <= iso(addD(t, -28))).pop();
+  const bDelta = bLast && b4 ? bLast.kg - b4.kg : null;
+  const bvs = bPts.map(x => x.v);
+  const bodyCard = `<div class="card chart"><div class="card-h"><h3>Körpergewicht</h3><span class="num muted">${bLast ? fmtKg(bLast.kg) + " kg" : ""}${bDelta != null ? ` <span style="color:${bDelta <= 0 ? "var(--good)" : "var(--warn)"}">${bDelta > 0 ? "+" : ""}${fmtKg(bDelta)}</span>` : ""}</span></div>
+    ${bPts.length >= 2 ? lineChart(bPts, { min: Math.floor(Math.min(...bvs) - 1), max: Math.ceil(Math.max(...bvs) + 1), color: "var(--endurance)", label: "Körpergewicht", unit: " kg" }) : `<p class="muted">Wiege dich 1 bis 2 Mal pro Woche morgens nüchtern. Ab zwei Werten erscheint der Verlauf.</p>`}
+    <form class="row" id="bodyForm" style="margin-top:12px"><input class="input num" id="bodyKg" inputmode="decimal" placeholder="z.B. 78,4" aria-label="Gewicht in kg" style="flex:1"><button class="btn primary small" type="submit">Eintragen</button></form></div>`;
+  // Heatmap 12 Wochen
+  const hmStart = addD(ws, -77); let hm = "";
+  for (let w = 0; w < 12; w++) { hm += `<div class="hm-col">`; for (let d = 0; d < 7; d++) { const day = addD(hmStart, w * 7 + d), ds = iso(day); const m = S.logs.filter(l => l.date === ds).reduce((a, l) => a + (l.dur || 30), 0); const lv = day > t ? -1 : m === 0 ? 0 : m < 40 ? 1 : m < 75 ? 2 : 3; hm += `<i class="l${lv}" title="${fmt(day)}${m ? " · " + m + " Min" : ""}"></i>`; } hm += `</div>`; }
+  // Rekorde
+  const prs = Object.keys(S.plan.exercises).map(id => { const h = exHistory(id); if (!h.length) return null; const b = h.reduce((x, y) => y.best.v > x.best.v ? y : x); return { id, b }; }).filter(Boolean).sort((a, b) => b.b.best.v - a.b.best.v).slice(0, 6);
   const logs = L.slice(0, 30).map(l => { const s = sess(l.session); const d = pd(l.date);
     return `<div class="logrow"><div class="dt"><b>${d.getDate()}</b>${MON[d.getMonth()]}</div><div class="tx"><b>${esc(s ? s.name : "Einheit")}</b><span>${[l.dur ? l.dur + " Min" : "", l.rpe ? "RPE " + l.rpe : "", l.note || ""].filter(Boolean).map(esc).join(" · ")}</span></div>
       <div style="display:flex;gap:6px;align-items:center">${l.knee != null ? `<span class="kb" style="--c:${kneeColor(l.knee)}" title="Knie">K ${l.knee}</span>` : ""}<button class="icon-btn" style="width:32px;height:32px" data-del="${esc(l.id)}" aria-label="Eintrag löschen">${ICON.close}</button></div></div>`; }).join("");
@@ -270,6 +333,9 @@ function renderFortschritt() {
     <div class="cols">
       <div class="card chart"><div class="card-h"><h3>Einheiten pro Woche</h3><span class="muted" style="font-size:12px">Ziel 5</span></div>${bars}</div>
       <div class="card chart"><div class="card-h"><h3>Knie</h3><span class="muted" style="font-size:12px">0 bis 10</span></div>${lineChart(K, { min: 0, max: 10, color: "var(--accent)", label: "Knieschmerz", band: [3, 10, "var(--bad)"] })}</div>
+      ${bodyCard}
+      <div class="card"><div class="card-h"><h3>Aktivität</h3><span class="muted" style="font-size:12px">12 Wochen</span></div><div class="heat">${hm}</div><div class="heat-l"><span>weniger</span><i class="l1"></i><i class="l2"></i><i class="l3"></i><span>mehr</span></div></div>
+      ${prs.length ? `<div class="card"><div class="card-h"><h3>Bestwerte</h3><span class="muted" style="font-size:12px">bester Satz</span></div><div class="items">${prs.map(x => `<button class="item" data-ex="${x.id}"><span class="tx"><b>${esc(S.plan.exercises[x.id].name)}</b><span>${fmt(pd(x.b.date))}</span></span><span class="dose">${fmtKg(x.b.best.w)} kg × ${x.b.best.r}</span></button>`).join("")}</div></div>` : ""}
       ${garminCharts}
       ${acts.length ? `<div class="card"><h3 style="margin-bottom:8px">Garmin Aktivitäten</h3><div class="loglist">${acts.map(a => { const d = pd(a.date); return `<div class="logrow"><div class="dt"><b>${d.getDate()}</b>${MON[d.getMonth()]}</div><div class="tx"><b>${esc(a.name || a.type)}</b><span>${[a.durMin ? a.durMin + " Min" : "", a.km ? a.km + " km" : "", a.avgHr ? "Ø " + a.avgHr + " bpm" : ""].filter(Boolean).join(" · ")}</span></div><span></span></div>`; }).join("")}</div></div>` : ""}
       <div class="card" style="grid-column:1/-1"><div class="card-h"><h3>Logbuch</h3><div class="row"><button class="btn ghost small" id="exportBtn">Export</button><label class="btn ghost small" for="importFile">Import</label><input type="file" id="importFile" accept="application/json" hidden></div></div>
@@ -307,10 +373,14 @@ function sessionSheet(k, date) {
 function exerciseSheet(id) {
   const e = S.plan.exercises[id];
   const hist = S.logs.filter(l => l.sets && l.sets[id] && l.sets[id].some(x => x.w)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4);
+  const H = exHistory(id), hv = H.map(h => Math.round(h.best.v)), best = H.length ? H.reduce((x, y) => y.best.v > x.best.v ? y : x) : null;
+  const histChart = H.length >= 2 ? `<div class="chart"><p class="block-t">Kraftverlauf (geschätztes Maximum)</p>${lineChart(H.slice(-20).map(h => ({ v: Math.round(h.best.v), l: fmt(pd(h.date)) })), { min: Math.floor(Math.min(...hv) * .9), max: Math.ceil(Math.max(...hv) * 1.05), color: "var(--accent)", label: "Kraftverlauf", unit: " kg" })}</div>` : "";
   openSheet(`<div class="anim t-${CAT_TYPE[e.cat] || "rest"}" data-anim="${id}"></div><div><p class="eyebrow">${esc(e.cat)} · ${esc(e.equip)}</p><h2 id="sheetTitle" style="margin-top:8px">${esc(e.name)}</h2></div>
     <div><p class="block-t">So gehts</p><ol class="howlist">${e.how.map(h => `<li>${esc(h)}</li>`).join("")}</ol></div>
     <div class="callout t-gym"><b>Typischer Fehler:</b> ${esc(e.err)}</div>
     <div><p class="block-t">Alternative</p><p>${esc(e.alt)}</p></div>
+    ${best ? `<div class="stats" style="margin:0"><div class="stat"><b class="num">${fmtKg(best.best.w)}</b><span>kg Bestwert</span></div><div class="stat"><b class="num">${best.best.r}</b><span>Wdh dabei</span></div><div class="stat"><b class="num">${H.length}</b><span>Trainings</span></div></div>` : ""}
+    ${histChart}
     ${hist.length ? `<div><p class="block-t">Deine letzten Gewichte</p><div class="items">${hist.map(l => `<div class="item static"><span class="tx"><b>${fmt(pd(l.date))}</b></span><span class="dose">${l.sets[id].filter(x => x.w || x.r).map(x => (x.w || "-") + " kg × " + (x.r || "-")).join("  ")}</span></div>`).join("")}</div></div>` : ""}`);
 }
 function settingsSheet() {
@@ -318,7 +388,7 @@ function settingsSheet() {
     <div class="field"><label for="setRace">Renntag in Paris (${esc(S.plan.race.window)})</label><input class="input" type="date" id="setRace" value="${raceDate()}" min="2027-04-08" max="2027-04-12"></div>
     <div class="field"><label>Darstellung</label><div class="seg" role="group" aria-label="Darstellung">${[["system", "Automatisch"], ["dark", "Dunkel"], ["light", "Hell"]].map(([v, l]) => `<button data-theme-set="${v}" aria-pressed="${S.settings.theme === v}">${l}</button>`).join("")}</div></div>
     <div class="callout t-endurance"><b>Daten:</b> Plan und Garmin Werte kommen aus dem GitHub Repository und werden täglich aktualisiert. Dein Logbuch liegt nur auf diesem Gerät. Sichere es ab und zu mit Export unter Fortschritt.</div>
-    <p class="muted" style="font-size:12.5px">Plan Version ${S.plan.version} · Stand ${fmt(pd(S.plan.updated))}${S.garmin && S.garmin.updated ? " · Garmin " + fmt(new Date(S.garmin.updated)) : ""}</p>`);
+    <p class="muted" style="font-size:12.5px">Übungsfotos: Free Exercise DB (gemeinfrei). Plan Version ${S.plan.version} · Stand ${fmt(pd(S.plan.updated))}${S.garmin && S.garmin.updated ? " · Garmin " + fmt(new Date(S.garmin.updated)) : ""}</p>`);
   $("#setRace").addEventListener("change", e => { if (e.target.value) { S.settings.raceDate = e.target.value; saveSettings(); renderAll(); toast("Renntag gespeichert"); } });
 }
 function kneeSheet() {
@@ -396,8 +466,8 @@ function startPlayer(k, date, resume) {
 function ensureRows(i) {
   const st = P.steps[i];
   if (P.sets[i]) return P.sets[i];
-  const prev = st.ex && isStrength(st) ? lastSets(st.ex) : null;
-  return (P.sets[i] = Array.from({ length: st.sets || 1 }, (_, j) => ({ w: prev && prev[j] && prev[j].w ? String(prev[j].w) : (prev && prev[0] && prev[0].w ? String(prev[0].w) : ""), r: "", d: false })));
+  const sg = st.ex && isStrength(st) ? suggest(st) : null;
+  return (P.sets[i] = Array.from({ length: st.sets || 1 }, () => ({ w: sg ? fmtKg(sg.w) : "", r: "", d: false })));
 }
 const stepDone = i => !!P.sets[i] && P.sets[i].every(x => x.d);
 function renderPlayer() {
@@ -419,6 +489,7 @@ function renderPlayer() {
       <div><p class="eyebrow">${esc(st.block)}</p><h2 style="margin-top:8px">${esc(stepName(st))}</h2></div>
       <div class="p-target"><span class="big num">${st.sets > 1 ? st.sets + " × " : ""}${esc(st.reps)}</span>${st.rest ? `<span class="pill">Pause ${st.rest >= 60 ? (st.rest / 60).toString().replace(".", ",") + " Min" : st.rest + " s"}</span>` : ""}${st.cue ? `<span class="pill accent">${esc(st.cue)}</span>` : ""}</div>
       ${kneeNote}
+      ${strength && st.ex && suggest(st) ? `<div class="sug${suggest(st).up ? " up" : ""}"><b>${suggest(st).up ? "↑ " : ""}${fmtKg(suggest(st).w)} kg</b><span>${esc(suggest(st).text)}</span></div>` : ""}
       ${prev && strength ? `<p class="last">Letztes Mal: ${prev.filter(x => x.w || x.r).map(x => (x.w || "-") + " kg × " + (x.r || "-")).join(", ")}</p>` : ""}
       ${tsec && !allDone ? `<button class="btn accent block" id="pTimer">${ICON.play} Timer starten · ${mmss(tsec)}</button>` : ""}
       ${strength ? `<div class="set-h"><span>Satz</span><span>kg</span><span>Wdh</span><span></span></div>` : ""}
@@ -475,8 +546,11 @@ function finishPlayer() {
   const s = sess(P.k);
   const doneSets = Object.values(P.sets).reduce((a, r) => a + r.filter(x => x.d).length, 0);
   let kg = 0; P.steps.forEach((st, i) => { if (P.sets[i] && isStrength(st)) P.sets[i].forEach(x => { if (x.d) kg += (parseFloat(String(x.w).replace(",", ".")) || 0) * (parseInt(x.r || targetReps(st)) || 0); }); });
+  const recs = [];
+  P.steps.forEach((st, i) => { if (!st.ex || !P.sets[i] || !isStrength(st)) return; const old = exHistory(st.ex).reduce((m, h) => Math.max(m, h.best.v), 0); P.sets[i].filter(x => x.d).forEach(x => { const v = e1rm(num(x.w), num(x.r || targetReps(st))); if (old > 0 && v > old + 0.01 && !recs.find(r => r.ex === st.ex)) recs.push({ ex: st.ex, w: num(x.w), r: x.r || targetReps(st) }); }); });
   closePlayer();
-  openSheet(`<div><p class="eyebrow">Geschafft</p><h2 id="sheetTitle" style="margin-top:8px">${esc(s.name)}</h2></div>
+  if (recs.length) buzz([60, 40, 60, 40, 120]);
+  openSheet(`${recs.length ? `<div class="pr-banner"><span class="eyebrow">Neuer Bestwert</span>${recs.map(r => `<b>${esc(S.plan.exercises[r.ex].name)} · ${fmtKg(r.w)} kg × ${r.r}</b>`).join("")}</div>` : ""}<div><p class="eyebrow">Geschafft</p><h2 id="sheetTitle" style="margin-top:8px">${esc(s.name)}</h2></div>
     <div class="stats" style="margin:0"><div class="stat"><b class="num">${mins}</b><span>Minuten</span></div><div class="stat"><b class="num">${doneSets}</b><span>Sätze</span></div><div class="stat"><b class="num">${kg ? Math.round(kg).toLocaleString("de-CH") : "-"}</b><span>kg bewegt</span></div></div>
     ${finishFields()}<button class="btn accent block" id="fSave">Speichern</button>`);
   bindScales();
@@ -499,10 +573,12 @@ function daySheet(date) {
 
 /* ---------- Events ---------- */
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-resume],[data-intro],[data-jump],[data-start],[data-sess],[data-ex],[data-day],[data-week],[data-mode],[data-cat],[data-open],[data-knee],[data-setknee],[data-quicklog],[data-del],[data-theme-set],[data-done]");
+  const t = e.target.closest("[data-goto],[data-checkin],[data-resume],[data-intro],[data-jump],[data-start],[data-sess],[data-ex],[data-day],[data-week],[data-mode],[data-cat],[data-open],[data-knee],[data-setknee],[data-quicklog],[data-del],[data-theme-set],[data-done]");
   if (!t) return;
   const d = t.dataset;
   if (d.resume !== undefined) { const r = pendingPlayer(); if (d.resume === "drop") { clearPlayer(); renderHeute(); return toast("Training verworfen"); } return r && startPlayer(r.k, r.date, r); }
+  if (d.goto === "paris") { S.planMode = "paris"; location.hash = "plan"; return renderPlan(); }
+  if (d.checkin === "edit") { delete S.checkins[iso(now())]; store.set("checkins", S.checkins); return renderHeute(); }
   if (d.intro !== undefined) { S.settings.introDone = true; saveSettings(); return renderHeute(); }
   if (d.start) return startPlayer(d.start, d.date);
   if (d.quicklog) return logSheet(d.quicklog, d.date);
@@ -549,6 +625,25 @@ document.addEventListener("click", e => {
   if (e.target.closest("#rMinus") && P.rest) { P.rest.end -= 15000; }
   if (e.target.closest("#exportBtn")) exportLogs();
 });
+// Check in: drei Skalen, gespeichert sobald alle gewählt sind
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-ci] button"); if (!b) return;
+  const sc = b.parentElement; sc.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  const pick = k => { const x = document.querySelector(`[data-ci="${k}"] [aria-pressed="true"]`); return x ? +x.dataset.v : null; };
+  const c = { sleep: pick("sleep"), energy: pick("energy"), sore: pick("sore") };
+  if (c.sleep && c.energy && c.sore) { S.checkins[iso(now())] = c; store.set("checkins", S.checkins); setTimeout(renderHeute, 250); toast("Tagesform gespeichert"); }
+});
+document.addEventListener("change", e => { if (e.target.id === "hxRange") renderPlan(); });
+document.addEventListener("submit", e => {
+  if (e.target.id !== "bodyForm") return; e.preventDefault();
+  const kg = num($("#bodyKg").value); if (kg < 30 || kg > 250) return toast("Bitte Gewicht in kg eingeben");
+  const d = iso(now()); S.body = S.body.filter(x => x.date !== d).concat({ date: d, kg }); store.set("body", S.body); renderFortschritt(); toast("Gewicht gespeichert");
+});
+document.addEventListener("input", e => {
+  if (e.target.id !== "hxRange") return;
+  S.settings.targetMin = +e.target.value; saveSettings();
+  const o = $("#hxOut"); if (o) o.textContent = hms(S.settings.targetMin * 60);
+});
 document.addEventListener("change", e => { if (e.target.id === "importFile") importLogs(e.target.files[0]); });
 $("#sheetClose").addEventListener("click", closeSheet);
 $("#backdrop").addEventListener("click", closeSheet);
@@ -560,7 +655,7 @@ $("#v-plan").addEventListener("touchstart", e => { sx = e.touches[0].clientX; sy
 $("#v-plan").addEventListener("touchend", e => { if (sx == null || S.planMode !== "woche") return; const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; sx = null; if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { S.week = addD(S.week, dx < 0 ? 7 : -7); renderPlan(); } }, { passive: true });
 
 function exportLogs() {
-  const data = JSON.stringify({ exported: new Date().toISOString(), settings: S.settings, logs: S.logs }, null, 2);
+  const data = JSON.stringify({ exported: new Date().toISOString(), settings: S.settings, logs: S.logs, body: S.body, checkins: S.checkins }, null, 2);
   const blob = new Blob([data], { type: "application/json" });
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "logbuch-" + iso(now()) + ".json"; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
@@ -593,6 +688,7 @@ async function load(path, fallback) { try { const r = await fetch(path, { cache:
   const [plan, garmin, coach] = await Promise.all([load("data/plan.json", null), load("data/garmin.json", null), load("data/coach.json", null)]);
   if (!plan) { $("#v-heute").innerHTML = `<div class="empty"><b>Plan konnte nicht geladen werden.</b><span>Prüfe die Internetverbindung und lade die Seite neu.</span></div>`; return; }
   S.plan = plan; S.garmin = garmin; S.coach = coach;
+  window.ExPhotos = Object.fromEntries(Object.entries(plan.exercises).filter(([, e]) => e.photo).map(([k, e]) => [k, { id: e.photo, fit: e.photoFit }]));
   if (S.settings.kneeStage >= plan.kneeStages.length) S.settings.kneeStage = 1;
   renderAll(); route();
   if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
