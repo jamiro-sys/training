@@ -338,9 +338,9 @@ function renderFortschritt() {
     <div class="row"><button class="btn ghost small" data-review="${iso(wd(t) >= 5 ? ws : addD(ws, -7))}">Rückblick</button><button class="btn ghost small" data-open="log">${ICON.plus} Eintrag</button></div></header>
     <div class="stats"><div class="stat"><b class="num">${thisWeek}</b><span>Einheiten diese Woche</span></div><div class="stat"><b class="num">${minutes}</b><span>Minuten in 4 Wochen</span></div><div class="stat"><b class="num">${streak}</b><span>Wochen in Folge mit 4+</span></div></div>
     <div class="cols">
+      ${historyCard()}
       <div class="card chart"><div class="card-h"><h3>Einheiten pro Woche</h3><span class="muted" style="font-size:12px">Ziel 5</span></div>${bars}</div>
       <div class="card chart"><div class="card-h"><h3>Knie</h3><span class="muted" style="font-size:12px">0 bis 10</span></div>${lineChart(K, { min: 0, max: 10, color: "var(--accent)", label: "Knieschmerz", band: [3, 10, "var(--bad)"] })}</div>
-      ${historyCard()}
       ${loadCard()}
       ${benchCard()}
       ${bodyCard}
