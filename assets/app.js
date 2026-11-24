@@ -72,7 +72,7 @@ const isDeload = d => { const p = phaseOf(d); return !!(p && p.deload && p.deloa
 /* ---------- Rendering Helfer ---------- */
 function ring(pct, color, size = 112, stroke = 10) {
   const r = (size - stroke) / 2, c = 2 * Math.PI * r, off = c * (1 - Math.max(0, Math.min(1, pct)));
-  return `<svg viewBox="0 0 ${size} ${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" stroke="var(--surface-2)" stroke-width="${stroke}"/><circle cx="${size / 2}" cy="${size / 2}" r="${r}" stroke="${color}" stroke-width="${stroke}" stroke-dasharray="${c}" stroke-dashoffset="${off}" style="transition:stroke-dashoffset .6s ease"/></svg>`;
+  return `<svg viewBox="0 0 ${size} ${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" stroke="var(--surface-2)" stroke-width="${stroke}"/><circle cx="${size / 2}" cy="${size / 2}" r="${r}" class="prog" stroke="${color}" stroke-width="${stroke}" stroke-dasharray="${c}" stroke-dashoffset="${off}" style="--len:${c}"/></svg>`;
 }
 function toast(t) { const el = $("#toast"); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 2600); }
 const greeting = () => { const h = new Date().getHours(); return h < 11 ? "Guten Morgen" : h < 17 ? "Hallo" : "Guten Abend"; };
@@ -134,7 +134,8 @@ function renderHeute() {
   // Tagesform
   const r = readinessToday();
   let form;
-  if (r) {
+  if (r && r.src === "check") form = "";
+  else if (r) {
     const kv = r.src === "garmin"
       ? `<div><b class="num">${r.g.hrv ?? "-"}</b><span>HRV ms</span></div><div><b class="num">${r.g.restingHr ?? "-"}</b><span>Ruhepuls</span></div><div><b class="num">${r.g.sleepH ?? "-"}</b><span>Schlaf h</span></div><div><b class="num">${r.g.bodyBattery ?? "-"}</b><span>Body Battery</span></div>`
       : `<div><b class="num">${r.c.sleep}/5</b><span>Schlaf</span></div><div><b class="num">${r.c.energy}/5</b><span>Energie</span></div><div><b class="num">${r.c.sore}/5</b><span>Muskelkater</span></div><div><button class="link" data-checkin="edit">Ändern</button></div>`;
@@ -160,8 +161,9 @@ function renderHeute() {
   const ks = S.plan.kneeStages[S.settings.kneeStage];
 
   $("#v-heute").innerHTML = `
-    <header class="head"><div><p class="eyebrow">${DL[wd(t)]}, ${fmt(t)} · KW ${kw(t)}${p ? " · " + esc(p.name) : ""}</p><h1 id="h-heute">${greeting()}</h1></div>
+    <header class="head"><div><p class="eyebrow">${DL[wd(t)]}, ${fmt(t)} · KW ${kw(t)}${p ? " · " + esc(p.name) : ""}</p><h1 id="h-heute">Heute</h1></div>
       <button class="icon-btn" data-open="settings" aria-label="Einstellungen"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button></header>
+    ${dialsHtml()}
     ${pend ? `<div class="banner t-${sess(pend.k).type}"><span class="dot"></span><div class="tx"><b>Training läuft: ${esc(sess(pend.k).name)}</b><span>Übung ${pend.i + 1} von ${sess(pend.k).blocks.reduce((a, b) => a + b.items.length, 0)}</span></div><button class="btn accent small" data-resume>Fortsetzen</button><button class="icon-btn" data-resume="drop" aria-label="Laufendes Training verwerfen">${ICON.close}</button></div>` : ""}
     ${!S.settings.introDone ? `<div class="card intro"><div class="card-h"><h3>So funktioniert die App</h3></div><ol class="howlist"><li><span><b>Training starten</b> führt dich Übung für Übung durch. Haken setzen, die Pause läuft automatisch.</span></li><li><span><b>Gewichte</b> werden vorgeschlagen. Schaffst du alle Wiederholungen, legt die App automatisch drauf.</span></li><li><span><b>Nach dem Training</b> Anstrengung und Knie bewerten. Daraus passe ich den Plan an.</span></li><li><span>Tippe auf einen <b>Tag in der Woche</b> oder ein <b>Übungsbild</b>, um Details zu sehen.</span></li></ol><button class="btn primary small" data-intro style="margin-top:14px">Verstanden</button></div>` : ""}
     <div class="grid today">
@@ -338,6 +340,7 @@ function renderFortschritt() {
     <div class="cols">
       <div class="card chart"><div class="card-h"><h3>Einheiten pro Woche</h3><span class="muted" style="font-size:12px">Ziel 5</span></div>${bars}</div>
       <div class="card chart"><div class="card-h"><h3>Knie</h3><span class="muted" style="font-size:12px">0 bis 10</span></div>${lineChart(K, { min: 0, max: 10, color: "var(--accent)", label: "Knieschmerz", band: [3, 10, "var(--bad)"] })}</div>
+      ${historyCard()}
       ${loadCard()}
       ${benchCard()}
       ${bodyCard}
@@ -396,7 +399,6 @@ function exerciseSheet(id) {
 function settingsSheet() {
   openSheet(`<h2 id="sheetTitle">Einstellungen</h2>
     <div class="field"><label for="setRace">Renntag in Paris (${esc(S.plan.race.window)})</label><input class="input" type="date" id="setRace" value="${raceDate()}" min="2027-04-08" max="2027-04-12"></div>
-    <div class="field"><label>Darstellung</label><div class="seg" role="group" aria-label="Darstellung">${[["system", "Automatisch"], ["dark", "Dunkel"], ["light", "Hell"]].map(([v, l]) => `<button data-theme-set="${v}" aria-pressed="${S.settings.theme === v}">${l}</button>`).join("")}</div></div>
     ${settingsExtras()}
     <p class="muted" style="font-size:12.5px">Übungsfotos: Free Exercise DB (gemeinfrei). Plan Version ${S.plan.version} · Stand ${fmt(pd(S.plan.updated))}${S.garmin && S.garmin.updated ? " · Garmin " + fmt(new Date(S.garmin.updated)) : ""}</p>`);
   $("#setRace").addEventListener("change", e => { if (e.target.value) { S.settings.raceDate = e.target.value; saveSettings(); renderAll(); toast("Renntag gespeichert"); } });
@@ -865,6 +867,99 @@ function heuteExtras(main) {
   return out.join("");
 }
 
+/* ---------- Kennzahlen Ringe: Erholung, Belastung, Schlaf ---------- */
+const gDay = date => ((S.garmin && S.garmin.days) || []).find(d => d.date === date) || null;
+const rpeFromHr = hr => hr ? Math.max(3, Math.min(9, (hr - 95) / 8)) : 5;
+function dayLoad(date) {
+  const L = S.logs.filter(l => l.date === date);
+  if (L.length) return L.reduce((a, l) => a + sessLoad(l), 0);
+  return ((S.garmin && S.garmin.activities) || []).filter(a => a.date === date).reduce((a, x) => a + (x.durMin || 0) * rpeFromHr(x.avgHr), 0);
+}
+const strainOf = load => Math.round(21 * (1 - Math.exp(-load / 700)) * 10) / 10;
+function recoveryFor(date) {
+  const c = S.checkins[date];
+  const g = gDay(date), gr = S.garmin && S.garmin.readiness;
+  if (gr && gr.date === date && (gr.hrv != null || gr.restingHr != null)) return gr.score;
+  if (c) return Math.round(((c.sleep + c.energy + (6 - c.sore)) - 3) / 12 * 100);
+  if (g && g.sleepH != null) return Math.max(5, Math.min(100, Math.round(70 + 5 * (g.sleepH - 7.5))));
+  return null;
+}
+function sleepFor(date) {
+  const g = gDay(date); if (g && g.sleepH != null) return { h: g.sleepH, pct: Math.min(100, Math.round(g.sleepH / 8 * 100)) };
+  const c = S.checkins[date]; if (c) return { h: null, pct: c.sleep * 20 };
+  return null;
+}
+const recCol = v => v == null ? "var(--faint)" : v >= 67 ? "var(--good)" : v >= 34 ? "var(--warn)" : "var(--bad)";
+const hm = h => h == null ? "" : Math.floor(h) + ":" + String(Math.round((h % 1) * 60)).padStart(2, "0");
+function dial(key, val, max, label, color, opts = {}) {
+  const size = 108, sw = 9, r = (size - sw) / 2, c = 2 * Math.PI * r, pct = val == null ? 0 : Math.max(0, Math.min(1, val / max));
+  return `<button class="dial" data-dial="${key}" aria-label="${label}: ${val == null ? "keine Daten" : val + (opts.unit || "")}">
+    <span class="dial-ring"><svg viewBox="0 0 ${size} ${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" class="trk" stroke-width="${sw}"/><circle cx="${size / 2}" cy="${size / 2}" r="${r}" class="prog" stroke="${color}" stroke-width="${sw}" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - pct)}" style="--len:${c}"/></svg>
+    <span class="dial-v"><b class="num" ${val == null ? "" : `data-count="${val}" data-dec="${opts.dec || 0}"`}>${val == null ? "?" : val}</b>${opts.unit && val != null ? `<i>${opts.unit}</i>` : ""}</span></span>
+    <span class="dial-l" style="--c:${color}">${label}</span>${opts.sub ? `<span class="dial-s">${opts.sub}</span>` : ""}</button>`;
+}
+function dialsHtml() {
+  const d = iso(now()), y = iso(addD(now(), -1)), rec = recoveryFor(d) ?? recoveryFor(y), st = strainOf(dayLoad(d)), sl = sleepFor(d) || sleepFor(y);
+  return `<section class="dials" aria-label="Kennzahlen heute">
+    ${dial("rec", rec, 100, "Erholung", recCol(rec), { unit: "%", sub: rec == null ? "Check in" : rec >= 67 ? "Bereit" : rec >= 34 ? "Normal" : "Erholen" })}
+    ${dial("strain", st, 21, "Belastung", "var(--strain)", { dec: 1, sub: st >= 14 ? "Hoch" : st >= 10 ? "Mittel" : "Leicht" })}
+    ${dial("sleep", sl ? sl.pct : null, 100, "Schlaf", "var(--sleep)", { unit: "%", sub: sl && sl.h ? hm(sl.h) + " h" : "keine Daten" })}
+  </section>`;
+}
+function barSeries(vals, labels, color, max, fmtV = v => v) {
+  const W = 340, H = 150, n = vals.length, bw = (W - 16) / n;
+  return `<svg viewBox="0 0 ${W} ${H}" class="bars" role="img">${vals.map((v, i) => { const h = v == null ? 0 : Math.max(3, v / max * (H - 42)); const col = typeof color === "function" ? color(v) : color; return `<rect x="${8 + i * bw + bw * .18}" y="${H - 22 - h}" width="${bw * .64}" height="${h}" rx="${Math.min(5, bw * .3)}" fill="${v == null ? "var(--surface-2)" : col}" style="--i:${i}"/>${v != null && (i === n - 1 || n <= 14) ? `<text x="${8 + i * bw + bw / 2}" y="${H - 28 - h}" text-anchor="middle">${fmtV(v)}</text>` : ""}<text x="${8 + i * bw + bw / 2}" y="${H - 6}" text-anchor="middle">${labels[i]}</text>`; }).join("")}</svg>`;
+}
+function dialSheet(key) {
+  const ds = []; for (let i = 13; i >= 0; i--) ds.push(addD(now(), -i));
+  const lab = ds.map(d => DN[wd(d)].slice(0, 1));
+  const avg = a => { const v = a.filter(x => x != null); return v.length ? v.reduce((x, y) => x + y, 0) / v.length : null; };
+  if (key === "rec") {
+    const v = ds.map(d => recoveryFor(iso(d))), a = avg(v);
+    openSheet(`<div><p class="eyebrow">Erholung · 14 Tage</p><h2 id="sheetTitle" style="margin-top:8px">${v[13] != null ? v[13] + " %" : "Noch offen"}</h2><p class="muted">${a != null ? "Schnitt " + Math.round(a) + " %. " : ""}Grün ab 67 Prozent: bereit für hohe Belastung. Gelb: normal trainieren. Rot: Erholung vor Intensität.</p></div>
+      <div class="chart">${barSeries(v, lab, recCol, 100, x => x)}</div>
+      <div class="callout"><b>Quelle:</b> Garmin HRV und Ruhepuls, sonst dein Check in, sonst die Schlafdauer.</div>`);
+  } else if (key === "strain") {
+    const v = ds.map(d => { const s = strainOf(dayLoad(iso(d))); return s || null; }), a = avg(v);
+    openSheet(`<div><p class="eyebrow">Belastung · 14 Tage</p><h2 id="sheetTitle" style="margin-top:8px">${String(strainOf(dayLoad(iso(now())))).replace(".", ",")} von 21</h2><p class="muted">${a != null ? "Schnitt an Trainingstagen " + String(Math.round(a * 10) / 10).replace(".", ",") + ". " : ""}Aus Minuten mal Anstrengung deiner Einträge, sonst aus Dauer und Puls der Garmin Aktivitäten.</p></div>
+      <div class="chart">${barSeries(v, lab, "var(--strain)", 21, x => String(x).replace(".", ","))}</div>${loadCard()}`);
+  } else {
+    const v = ds.map(d => { const g = gDay(iso(d)); return g && g.sleepH != null ? g.sleepH : null; }), a = avg(v);
+    openSheet(`<div><p class="eyebrow">Schlaf · 14 Tage</p><h2 id="sheetTitle" style="margin-top:8px">${v[13] != null ? hm(v[13]) + " Std" : v[12] != null ? hm(v[12]) + " Std" : "Keine Daten"}</h2><p class="muted">${a != null ? "Schnitt " + hm(a) + " h. " : ""}Ziel 8 Stunden. In Trainingsphasen mit Fussball eher mehr.</p></div>
+      <div class="chart">${barSeries(v, lab, x => x >= 7.5 ? "var(--sleep)" : x >= 6.5 ? "color-mix(in srgb,var(--sleep) 60%,var(--surface-2))" : "var(--bad)", 10, x => hm(x))}</div>`);
+  }
+}
+/* Langzeit aus dem Garmin Archiv: Minuten pro Monat nach Sportart, Kilometer und Fitness */
+function historyCard() {
+  const H = S.history; if (!H || !H.activities) return "";
+  const A = Object.values(H.activities); if (!A.length) return "";
+  const grp = t => /Soccer|Football/i.test(t) ? "football" : /Run/i.test(t) ? "run" : /Ride|Cycl|Bike/i.test(t) ? "bike" : /Weight|Strength|Training/i.test(t) ? "gym" : "other";
+  const GC = { football: "var(--football)", run: "var(--hyrox)", bike: "var(--endurance)", gym: "var(--gym)", other: "var(--rest)" }, GN = { football: "Fussball", run: "Laufen", bike: "Velo", gym: "Kraft", other: "Andere" };
+  const months = []; const d0 = now(); for (let i = 11; i >= 0; i--) { const m = new Date(d0.getFullYear(), d0.getMonth() - i, 1); months.push(m.getFullYear() + "-" + String(m.getMonth() + 1).padStart(2, "0")); }
+  const data = months.map(m => { const o = { football: 0, run: 0, bike: 0, gym: 0, other: 0 }; A.filter(a => a.date && a.date.startsWith(m)).forEach(a => o[grp(a.type)] += a.durMin || 0); return o; });
+  const mx = Math.max(300, ...data.map(o => Object.values(o).reduce((a, b) => a + b, 0)));
+  const W = 340, Hh = 150, bw = (W - 16) / 12;
+  const bars = data.map((o, i) => { let yy = Hh - 22; return Object.keys(GC).map(k => { const h = o[k] / mx * (Hh - 34); yy -= h; return h > 0 ? `<rect x="${8 + i * bw + bw * .18}" y="${yy}" width="${bw * .64}" height="${h}" rx="2" fill="${GC[k]}" style="--i:${i}"/>` : ""; }).join("") + `<text x="${8 + i * bw + bw / 2}" y="${Hh - 6}" text-anchor="middle">${MON[+months[i].slice(5) - 1].slice(0, 1)}</text>`; }).join("");
+  const yr = A.filter(a => a.date >= iso(addD(now(), -365)));
+  const km = yr.filter(a => grp(a.type) === "run").reduce((a, x) => a + (x.km || 0), 0), fb = yr.filter(a => grp(a.type) === "football").length, hrs = yr.reduce((a, x) => a + (x.durMin || 0), 0) / 60;
+  const days = Object.entries(H.days || {}).sort((a, b) => a[0].localeCompare(b[0])), ctl = days.filter(([, v]) => v.ctl != null);
+  const ctlNow = ctl.length ? ctl[ctl.length - 1][1].ctl : null, ctl90 = ctl.filter(([k]) => k <= iso(addD(now(), -90))).pop();
+  return `<div class="card" style="grid-column:1/-1"><div class="card-h"><h3>Langzeit · 12 Monate</h3><span class="muted" style="font-size:12px">${A.length} Aktivitäten im Archiv</span></div>
+    <div class="stats" style="margin-bottom:12px"><div class="stat"><b class="num">${Math.round(hrs)}</b><span>Stunden</span></div><div class="stat"><b class="num">${Math.round(km)}</b><span>Lauf km</span></div><div class="stat"><b class="num">${fb}</b><span>Fussball</span></div></div>
+    <div class="chart"><svg viewBox="0 0 ${W} ${Hh}" class="bars" role="img" aria-label="Minuten pro Monat">${bars}</svg></div>
+    <div class="legend">${Object.keys(GC).map(k => `<span><i style="background:${GC[k]}"></i>${GN[k]}</span>`).join("")}</div>
+    ${ctlNow != null ? `<p class="muted" style="font-size:13px;margin-top:10px">Fitness (CTL aus intervals.icu): <b style="color:var(--fg)">${Math.round(ctlNow)}</b>${ctl90 ? `, vor 3 Monaten ${Math.round(ctl90[1].ctl)}` : ""}.</p>` : ""}</div>`;
+}
+/* Zahlen hochzählen */
+function countUp(root = document) {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  root.querySelectorAll("[data-count]").forEach(el => {
+    const to = parseFloat(el.dataset.count), dec = +el.dataset.dec || 0, t0 = performance.now(), dur = 900;
+    const step = t => { const e = Math.min(1, (t - t0) / dur), v = to * (1 - Math.pow(1 - e, 3)); el.textContent = dec ? v.toFixed(dec).replace(".", ",") : Math.round(v); if (e < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  });
+}
+
 /* ---------- Events ---------- */
 document.addEventListener("click", e => {
   const t = e.target.closest("[data-goto],[data-checkin],[data-resume],[data-intro],[data-jump],[data-start],[data-sess],[data-ex],[data-day],[data-week],[data-mode],[data-cat],[data-open],[data-knee],[data-setknee],[data-quicklog],[data-del],[data-theme-set],[data-done]");
@@ -969,6 +1064,7 @@ function importLogs(file) {
 document.addEventListener("click", async e => {
   const q = sel => e.target.closest(sel);
   let b;
+  if ((b = q("[data-dial]"))) return dialSheet(b.dataset.dial);
   if ((b = q("[data-kneeset]"))) { setKnee(+b.dataset.kneeset); renderAll(); return toast("Knie Stufe " + S.settings.kneeStage); }
   if ((b = q("[data-review]"))) return reviewSheet(pd(b.dataset.review));
   if ((b = q("[data-bench]"))) return benchSheet();
@@ -1028,20 +1124,21 @@ document.addEventListener("keydown", e => { if (e.key === "Escape" && SIM.on && 
 const VIEWS = ["heute", "plan", "uebungen", "fortschritt"];
 function route() {
   const v = VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "heute";
-  VIEWS.forEach(x => { $("#v-" + x).hidden = x !== v; });
+  VIEWS.forEach(x => { const el = $("#v-" + x); el.hidden = x !== v; if (x === v) { el.classList.remove("enter"); void el.offsetWidth; el.classList.add("enter"); countUp(el); } });
   document.querySelectorAll(".rail a").forEach(a => a.dataset.view === v ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
   if (v === "plan") renderPlan();
   window.scrollTo(0, 0);
 }
 window.addEventListener("hashchange", route);
-function applyTheme() { const t = S.settings.theme; if (t === "system") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", t); }
-function renderAll() { renderHeute(); renderPlan(); renderUebungen(); renderFortschritt(); }
+function applyTheme() { document.documentElement.setAttribute("data-theme", "dark"); }
+function renderAll() { renderHeute(); renderPlan(); renderUebungen(); renderFortschritt(); countUp($("#v-heute")); }
 
 /* ---------- Start ---------- */
 async function load(path, fallback) { try { const r = await fetch(path, { cache: "no-cache" }); if (!r.ok) throw 0; return await r.json(); } catch { return fallback; } }
 (async () => {
   applyTheme();
   const [plan, garmin, coach] = await Promise.all([load("data/plan.json", null), load("data/garmin.json", null), load("data/coach.json", null)]);
+  load("data/garmin-history.json", null).then(h => { S.history = h; if (h && S.plan) renderFortschritt(); });
   if (!plan) { $("#v-heute").innerHTML = `<div class="empty"><b>Plan konnte nicht geladen werden.</b><span>Prüfe die Internetverbindung und lade die Seite neu.</span></div>`; return; }
   S.plan = plan; S.garmin = garmin; S.coach = coach;
   window.ExPhotos = Object.fromEntries(Object.entries(plan.exercises).filter(([, e]) => e.photo).map(([k, e]) => [k, { id: e.photo, fit: e.photoFit }]));

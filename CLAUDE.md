@@ -4,7 +4,8 @@ Statische Trainings App (GitHub Pages, Branch `main`, Root). Kein Build Schritt.
 
 - `index.html`, `assets/styles.css`, `assets/app.js`: App
 - `data/plan.json`: Phasen, Einheiten, Übungen, Knie Stufen
-- `data/garmin.json`: Garmin Werte (täglich aktualisiert)
+- `data/garmin.json`: Garmin Werte der letzten 42 Tage (täglich aktualisiert)
+- `data/garmin-history.json`: Archiv aller Garmin Tage und Aktivitäten seit 2024 (wird nie gekürzt)
 - `data/coach.json`: Coach Notiz für die Startseite
 
 ## Schreibstil

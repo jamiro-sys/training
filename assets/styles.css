@@ -1,37 +1,21 @@
-/* Plan Paris 27
-   Layout: Mobile App mit Tab Bar unten, ab 900px Seitenleiste links. Karten nur für echte Objekte,
-   Typo: Archivo (schmal bis breit) für Zahlen und Titel, Inter für Text, JetBrains Mono für Messwerte. */
+/* Plan Paris 27 · Look: dunkel, ruhig, Kennzahlen im Mittelpunkt (inspiriert von Wearable Apps).
+   Typo: Barlow für Zahlen und Titel, Inter für Text. Farben: Erholung grün/gelb/rot, Belastung blau, Schlaf violettgrau. */
 :root{
-  --bg:#0A0B0D; --surface:#121418; --surface-2:#1A1D22; --line:#252930; --fg:#F2F3F5; --muted:#8C929C; --faint:#5A606A;
-  --accent:#FF5A36; --accent-ink:#140502;
-  --gym:#F5B841; --endurance:#4CC3FF; --football:#3DD68C; --hyrox:#B68CFF; --rest:#6B7380;
-  --good:#3DD68C; --warn:#F5B841; --bad:#FF5C6C;
-  --shadow:0 20px 60px rgba(0,0,0,.45);
-  --r:18px; --r-s:12px;
-  --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --bg:#07080A; --surface:#121418; --surface-2:#1B1E23; --line:#22262C; --fg:#F5F7FA; --muted:#8B929B; --faint:#4B525B;
+  --accent:#1FA3FF; --accent-ink:#04121E;
+  --rec:#2EE6A6; --strain:#1FA3FF; --sleep:#9AA7FF;
+  --gym:#FFB547; --endurance:#1FA3FF; --football:#2EE6A6; --hyrox:#B49CFF; --rest:#5C636C;
+  --good:#2EE6A6; --warn:#FFD23F; --bad:#FF4D6A;
+  --shadow:0 24px 70px rgba(0,0,0,.6);
+  --r:20px; --r-s:14px;
+  --f-display:"Barlow","Inter",system-ui,sans-serif;
   --f-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --f-mono:"Barlow","Inter",system-ui,sans-serif;
   --tab-h:64px;
-  --anim-fg:#F2F3F5; --anim-far:#6E7581; --anim-prop:#4A505A; --anim-line:#3A3F48; --anim-accent:var(--c,var(--accent));
+  --ease:cubic-bezier(.22,.9,.24,1);
+  --anim-fg:#F5F7FA; --anim-far:#5E6570; --anim-prop:#3A4048; --anim-line:#2A2F36; --anim-accent:var(--c,var(--accent));
   color-scheme:dark;
 }
-@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
-  --bg:#F4F5F7; --surface:#FFFFFF; --surface-2:#EEF0F3; --line:#E1E4E9; --fg:#0E1013; --muted:#5E6570; --faint:#9AA1AB;
-  --accent:#E8461F; --accent-ink:#FFFFFF;
-  --gym:#C98A0B; --endurance:#0A8BD0; --football:#13A25F; --hyrox:#7A4BE0; --rest:#7A828E;
-  --good:#13A25F; --warn:#C98A0B; --bad:#D9344A;
-  --shadow:0 20px 60px rgba(20,24,30,.18); color-scheme:light;
-  --anim-fg:#16191E; --anim-far:#A3AAB4; --anim-prop:#C2C8D0; --anim-line:#CDD2D9;
-}}
-:root[data-theme="light"]{
-  --bg:#F4F5F7; --surface:#FFFFFF; --surface-2:#EEF0F3; --line:#E1E4E9; --fg:#0E1013; --muted:#5E6570; --faint:#9AA1AB;
-  --accent:#E8461F; --accent-ink:#FFFFFF;
-  --gym:#C98A0B; --endurance:#0A8BD0; --football:#13A25F; --hyrox:#7A4BE0; --rest:#7A828E;
-  --good:#13A25F; --warn:#C98A0B; --bad:#D9344A;
-  --shadow:0 20px 60px rgba(20,24,30,.18); color-scheme:light;
-  --anim-fg:#16191E; --anim-far:#A3AAB4; --anim-prop:#C2C8D0; --anim-line:#CDD2D9;
-}
-
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
 body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--f-body);min-height:100dvh}
@@ -472,3 +456,97 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .bench-due{display:flex;align-items:center;gap:14px;background:linear-gradient(120deg,color-mix(in srgb,var(--hyrox) 16%,var(--surface)),var(--surface) 70%)}
 .bench-due>div{flex:1;display:flex;flex-direction:column;gap:4px}
 .bench-due b{font:800 20px/1.15 var(--f-display)}
+
+/* ===================== Look 2.0: ruhig, dunkel, Kennzahlen zuerst ===================== */
+body{background:radial-gradient(140% 55% at 50% -12%,#0E2230 0%,rgba(7,8,10,0) 62%),var(--bg);background-attachment:fixed;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--f-display);font-weight:700;letter-spacing:-.005em}
+.num{font-family:var(--f-display);font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.eyebrow{font:700 11px/1.2 var(--f-body);letter-spacing:.16em;color:var(--muted)}
+.head{margin-bottom:18px}
+.head h1{font-size:30px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:none;padding:18px}
+.card h3{font:700 13px/1.2 var(--f-body);text-transform:uppercase;letter-spacing:.14em;color:var(--fg)}
+.card-h{margin-bottom:16px}
+.pill{background:var(--surface-2);color:var(--muted);font-weight:600;letter-spacing:.02em}
+.btn{height:50px;border-radius:14px;font-weight:700;letter-spacing:.01em;transition:transform .18s var(--ease),background .25s,opacity .2s}
+.btn.small{height:36px;border-radius:11px}
+.btn.accent{background:var(--fg);color:#05070A}
+.btn.primary{background:var(--surface-2);color:var(--fg);box-shadow:inset 0 0 0 1px var(--line)}
+.btn.ghost{background:transparent;color:var(--fg);box-shadow:inset 0 0 0 1px var(--line)}
+.icon-btn{background:var(--surface);box-shadow:inset 0 0 0 1px var(--line)}
+.link{color:var(--accent)}
+
+/* Kennzahlen Ringe */
+.dials{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:2px 0 18px}
+.dial{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0 4px;border-radius:18px;transition:background .25s}
+.dial:hover{background:color-mix(in srgb,var(--surface) 70%,transparent)}
+.dial:focus-visible{outline:2px solid var(--accent)}
+.dial:active{transform:scale(.97)}
+.dial-ring{position:relative;width:min(108px,26vw);aspect-ratio:1}
+.dial-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.dial .trk{fill:none;stroke:#1C2025}
+.prog{fill:none;stroke-linecap:round;animation:ringIn 1.3s var(--ease) both}
+@keyframes ringIn{from{stroke-dashoffset:var(--len)}}
+.dial-v{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:1px}
+.dial-v b{font:800 clamp(24px,7vw,32px)/1 var(--f-display)}
+.dial-v i{font:700 13px/1 var(--f-display);font-style:normal;color:var(--muted);margin-top:8px}
+.dial-l{display:flex;align-items:center;gap:6px;font:700 11px/1 var(--f-body);letter-spacing:.14em;text-transform:uppercase}
+.dial-l::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--c)}
+.dial-s{font-size:12px;color:var(--muted)}
+.ring .prog{stroke-linecap:round}
+
+/* Heute Karte */
+.hero{background:radial-gradient(120% 120% at 100% 0%,color-mix(in srgb,var(--c) 16%,transparent),transparent 55%),var(--surface);border:1px solid var(--line);border-radius:24px;min-height:0;padding:22px}
+.hero h2{font-size:clamp(30px,8.5vw,44px);font-weight:800;text-transform:uppercase;letter-spacing:.01em;line-height:1}
+.hero .tag{font-size:11px;letter-spacing:.16em}
+.hero .meta b{font:800 24px/1 var(--f-display)}
+.hero .meta span{text-transform:uppercase;letter-spacing:.12em;font-size:10.5px;font-weight:600}
+.thumbs img{border-color:var(--surface);border-radius:12px}
+
+/* Wochenleiste, Listen */
+.strip button.today{background:var(--fg);color:#05070A}
+.progress{height:4px}
+.srow{background:var(--surface-2);border-radius:12px}
+.srow:hover{background:color-mix(in srgb,var(--c) 12%,var(--surface-2))}
+.day{border-radius:16px}
+.items{background:var(--surface-2);border-radius:14px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:16px}
+.stat b{font:800 32px/1 var(--f-display)}
+.stat span{text-transform:uppercase;letter-spacing:.1em;font-size:10.5px;font-weight:600}
+.big-num{font-family:var(--f-display);font-weight:800}
+
+/* Diagramme */
+.chart text,.bars text{fill:var(--muted);font:600 10px var(--f-display);stroke:none}
+.bars rect{transform-box:fill-box;transform-origin:50% 100%;animation:grow .8s var(--ease) both;animation-delay:calc(var(--i,0) * 35ms)}
+@keyframes grow{from{transform:scaleY(0)}}
+.chart polyline{stroke-dasharray:1200;animation:draw 1.4s var(--ease) both}
+@keyframes draw{from{stroke-dashoffset:1200}to{stroke-dashoffset:0}}
+
+/* Tab Leiste */
+.rail{background:rgba(10,12,15,.78);border-color:#1E2227}
+.rail a[aria-current="page"]{background:#1A1E23;color:var(--fg)}
+.rail a[aria-current="page"] svg{color:var(--fg)}
+@media (min-width:900px){.rail{background:#07080A;border-right:1px solid #16191D}}
+
+/* Sheets und Player */
+.sheet{background:#101215;border-top:1px solid var(--line)}
+.sheet h2{text-transform:uppercase;letter-spacing:.01em;font-weight:800}
+.player{background:radial-gradient(130% 50% at 50% -10%,color-mix(in srgb,var(--c,var(--accent)) 14%,transparent),transparent 60%),var(--bg)}
+.p-body h2{text-transform:uppercase;font-weight:800;letter-spacing:.01em}
+.set input{background:var(--surface);border-color:var(--line);font-family:var(--f-display);font-weight:700;font-size:19px}
+.set .ok.on{background:var(--good);color:#04140D}
+.p-prog i{height:3px}
+.rest{background:rgba(7,8,10,.94)}
+
+/* Bewegung: Ansichten blenden weich ein, Karten folgen gestaffelt */
+.view.enter>*{animation:rise .55s var(--ease) both}
+.view.enter>*:nth-child(2){animation-delay:.04s}.view.enter>*:nth-child(3){animation-delay:.08s}.view.enter>*:nth-child(4){animation-delay:.12s}.view.enter>*:nth-child(5){animation-delay:.16s}.view.enter>*:nth-child(n+6){animation-delay:.2s}
+.grid.today>*{animation:rise .6s var(--ease) both}
+.grid.today>*:nth-child(2){animation-delay:.06s}.grid.today>*:nth-child(3){animation-delay:.12s}.grid.today>*:nth-child(4){animation-delay:.16s}.grid.today>*:nth-child(n+5){animation-delay:.2s}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.sheet{animation:sheetUp .42s var(--ease)}
+@keyframes sheetUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@media (min-width:900px){.sheet{animation:pop .3s var(--ease)}}
+.card,.srow,.exitem,.supp,.item{transition:background .25s,border-color .25s,transform .18s var(--ease)}
+.exitem:active,.srow:active,.supp:active,.item:active{transform:scale(.985)}
+@media (prefers-reduced-motion:reduce){.view.enter>*,.grid.today>*,.prog,.bars rect,.chart polyline,.sheet{animation:none!important}}

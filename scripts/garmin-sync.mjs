@@ -6,7 +6,11 @@ const KEY = process.env.INTERVALS_API_KEY, ID = process.env.INTERVALS_ATHLETE_ID
 if (!KEY || !ID) { console.log("Keine intervals.icu Zugangsdaten gesetzt, nichts zu tun."); process.exit(0); }
 
 const iso = d => d.toISOString().slice(0, 10);
-const today = new Date(), oldest = new Date(today.getTime() - 41 * 864e5);
+const today = new Date();
+// Archiv: beim ersten Lauf die ganze Historie ab 2024 holen, danach die letzten 42 Tage
+const hist = JSON.parse(await readFile("data/garmin-history.json", "utf8").catch(() => "null")) || { days: {}, activities: {} };
+const firstRun = !Object.keys(hist.days).length;
+const oldest = firstRun ? new Date("2024-01-01T00:00:00Z") : new Date(today.getTime() - 41 * 864e5);
 const auth = "Basic " + Buffer.from("API_KEY:" + KEY).toString("base64");
 async function get(path) {
   const r = await fetch(`https://intervals.icu/api/v1/athlete/${encodeURIComponent(ID)}/${path}`, { headers: { Authorization: auth, Accept: "application/json" } });
@@ -21,6 +25,20 @@ const [wellness, acts] = await Promise.all([
   get(`activities?oldest=${iso(oldest)}&newest=${iso(today)}`)
 ]);
 
+// Archiv nachführen: jeder Tag und jede Aktivität bleibt dauerhaft gespeichert
+for (const w of wellness) hist.days[w.id] = {
+  hrv: num(w.hrv), restingHr: num(w.restingHR), sleepH: w.sleepSecs ? num(w.sleepSecs / 3600, 10) : null, sleepScore: num(w.sleepScore),
+  readiness: num(w.readiness), weight: num(w.weight, 10), steps: num(w.steps), stress: num(w.stress), spO2: num(w.spO2),
+  ctl: num(w.ctl, 10), atl: num(w.atl, 10)
+};
+for (const a of acts) hist.activities[a.id] = {
+  date: String(a.start_date_local || "").slice(0, 10), type: a.type, name: a.name,
+  durMin: a.moving_time ? Math.round(a.moving_time / 60) : null, km: a.distance ? num(a.distance / 1000, 100) : null,
+  avgHr: num(a.average_heartrate), maxHr: num(a.max_heartrate), load: num(a.icu_training_load), elev: num(a.total_elevation_gain)
+};
+hist.updated = new Date().toISOString();
+await writeFile("data/garmin-history.json", JSON.stringify(hist) + "\n");
+
 const runKm = {}, bikeMin = {};
 for (const a of acts) {
   const d = String(a.start_date_local || "").slice(0, 10), t = String(a.type || "");
@@ -28,7 +46,8 @@ for (const a of acts) {
   if (/Ride/i.test(t)) bikeMin[d] = (bikeMin[d] || 0) + (a.moving_time || 0) / 60;
 }
 
-const days = wellness.map(w => ({
+const cut = iso(new Date(today.getTime() - 41 * 864e5));
+const days = wellness.filter(w => w.id >= cut).map(w => ({
   date: w.id,
   hrv: num(w.hrv),
   restingHr: num(w.restingHR),
@@ -55,7 +74,7 @@ if (last) {
   readiness = { score, label: score >= 70 ? "Bereit" : score >= 45 ? "Normal" : "Erholen", hrv: last.hrv, restingHr: last.restingHr, sleepH: last.sleepH, bodyBattery: last.bodyBattery, date: last.date };
 }
 
-const activities = acts
+const activities = acts.filter(a => String(a.start_date_local).slice(0, 10) >= cut)
   .sort((a, b) => String(b.start_date_local).localeCompare(String(a.start_date_local)))
   .slice(0, 14)
   .map(a => ({ date: String(a.start_date_local).slice(0, 10), type: a.type, name: a.name, durMin: a.moving_time ? Math.round(a.moving_time / 60) : null, km: a.distance ? num(a.distance / 1000, 10) : null, avgHr: num(a.average_heartrate) }));
