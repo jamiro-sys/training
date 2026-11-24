@@ -126,7 +126,7 @@ function renderHeute() {
   if (!s.dur || done) for (let i = 1; i <= 7 && !nextK; i++) { const d = addD(t, i); const k = sessionsFor(d).find(x => sess(x).dur); if (k) { nextD = d; nextK = k; } }
   const pend = pendingPlayer();
   const nEx = s.blocks.reduce((a, b) => a + b.items.length, 0);
-  const photos = [...new Set(s.blocks.flatMap(b => b.items.map(i => i.ex)).filter(x => x && window.ExPhotos && window.ExPhotos[x]))].slice(0, 4);
+  const photos = [...new Set(s.blocks.flatMap(b => b.items.map(i => i.ex)).filter(x => x && window.ExAnim && window.ExAnim.has(x)))].slice(0, 4);
 
   const ph = S.plan.phases.filter(x => x.from <= raceDate());
   const track = ph.map(x => { const a = pd(x.from), b = pd(x.to), tot = days(a, b) + 1, pr = Math.max(0, Math.min(1, (days(a, t) + 1) / tot)); return `<span class="t-${x.color}" title="${esc(x.name)}"><i style="width:${(t < a ? 0 : pr) * 100}%"></i></span>`; }).join("");
@@ -174,7 +174,7 @@ function renderHeute() {
         <h2>${esc(s.name)}</h2>
         <p class="goal">${esc(s.goal)}</p>
         ${extra.length ? `<p class="muted" style="font-size:13px">Dazu: ${esc(extra.join(", "))}</p>` : ""}
-        ${photos.length ? `<div class="thumbs" aria-hidden="true">${photos.map(x => `<img src="assets/ex/${window.ExPhotos[x].id}-0.jpg" alt="" loading="lazy">`).join("")}${nEx > photos.length ? `<span>+${nEx - photos.length}</span>` : ""}</div>` : ""}
+        ${photos.length ? `<div class="thumbs" aria-hidden="true">${photos.map(x => `<span class="thumb-anim anim-mini" data-anim="${x}" data-still></span>`).join("")}${nEx > photos.length ? `<span>+${nEx - photos.length}</span>` : ""}</div>` : ""}
         <div class="meta">
           ${s.dur ? `<div><b class="num">${s.dur}</b><span>Minuten</span></div>` : ""}
           ${nEx ? `<div><b class="num">${nEx}</b><span>Übungen</span></div>` : ""}
@@ -259,9 +259,9 @@ function parisCalc() {
 const CAT_TYPE = { Beine: "gym", "Oberkörper": "gym", Rumpf: "gym", Knie: "football", Mobility: "rest", Ausdauer: "endurance", Hyrox: "hyrox" };
 function renderUebungen() {
   const ex = S.plan.exercises;
-  const cats = ["Alle", ...new Set(Object.values(ex).map(e => e.cat))];
+  const cats = ["Alle", "Favoriten", ...new Set(Object.values(ex).map(e => e.cat))];
   const q = S.exQ.trim().toLowerCase();
-  const list = Object.entries(ex).filter(([, e]) => (S.exCat === "Alle" || e.cat === S.exCat) && (!q || (e.name + " " + e.equip + " " + e.cat).toLowerCase().includes(q)));
+  const list = Object.entries(ex).filter(([, e]) => (S.exCat === "Alle" || (S.exCat === "Favoriten" ? e.fav : e.cat === S.exCat)) && (!q || (e.name + " " + e.equip + " " + e.cat).toLowerCase().includes(q)));
   const view = $("#v-uebungen");
   if (!view.dataset.ready) {
     view.innerHTML = `<header class="head"><div><p class="eyebrow">${Object.keys(ex).length} Übungen</p><h1>Übungen</h1></div></header>
@@ -271,7 +271,7 @@ function renderUebungen() {
     $("#exSearch").addEventListener("input", e => { S.exQ = e.target.value; renderUebungen(); });
   }
   $("#exChips").innerHTML = cats.map(c => `<button class="chip" data-cat="${esc(c)}" aria-pressed="${c === S.exCat}">${esc(c)}</button>`).join("");
-  $("#exList").innerHTML = list.length ? list.map(([id, e]) => `<button class="exitem t-${CAT_TYPE[e.cat] || "rest"}" data-ex="${id}"><span class="ic anim-mini" data-anim="${id}" data-still></span><span class="tx"><b>${esc(e.name)}</b><span>${esc(e.cat)} · ${esc(e.equip)}</span></span></button>`).join("")
+  $("#exList").innerHTML = list.length ? list.map(([id, e]) => `<button class="exitem t-${CAT_TYPE[e.cat] || "rest"}" data-ex="${id}"><span class="ic anim-mini" data-anim="${id}" data-still></span><span class="tx"><b>${esc(e.name)}${e.fav ? ' <i class="fav" aria-label="Lieblingsübung">★</i>' : ""}</b><span>${esc(e.cat)} · ${esc(e.equip)}</span></span></button>`).join("")
     : `<div class="empty"><b>Keine Übung gefunden.</b><span>Versuche einen anderen Begriff oder wähle «Alle».</span></div>`;
   scanAnim($("#exList"));
 }
@@ -388,7 +388,7 @@ function exerciseSheet(id) {
   const hist = S.logs.filter(l => l.sets && l.sets[id] && l.sets[id].some(x => x.w)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4);
   const H = exHistory(id), hv = H.map(h => Math.round(h.best.v)), best = H.length ? H.reduce((x, y) => y.best.v > x.best.v ? y : x) : null;
   const histChart = H.length >= 2 ? `<div class="chart"><p class="block-t">Kraftverlauf (geschätztes Maximum)</p>${lineChart(H.slice(-20).map(h => ({ v: Math.round(h.best.v), l: fmt(pd(h.date)) })), { min: Math.floor(Math.min(...hv) * .9), max: Math.ceil(Math.max(...hv) * 1.05), color: "var(--accent)", label: "Kraftverlauf", unit: " kg" })}</div>` : "";
-  openSheet(`<div class="anim t-${CAT_TYPE[e.cat] || "rest"}" data-anim="${id}"></div><div><p class="eyebrow">${esc(e.cat)} · ${esc(e.equip)}</p><h2 id="sheetTitle" style="margin-top:8px">${esc(e.name)}</h2></div>
+  openSheet(`<div class="anim t-${CAT_TYPE[e.cat] || "rest"}" data-anim="${id}"></div><div><p class="eyebrow">${esc(e.cat)} · ${esc(e.equip)}</p><h2 id="sheetTitle" style="margin-top:8px">${esc(e.name)}${e.fav ? ' <i class="fav">★</i>' : ""}</h2></div>
     <a class="btn ghost block" href="https://www.youtube.com/results?search_query=${encodeURIComponent((e.yt || e.name) + " Ausführung")}" target="_blank" rel="noopener">${ICON.play} Video ansehen</a>
     <div><p class="block-t">So gehts</p><ol class="howlist">${e.how.map(h => `<li>${esc(h)}</li>`).join("")}</ol></div>
     <div class="callout t-gym"><b>Typischer Fehler:</b> ${esc(e.err)}</div>
@@ -401,7 +401,7 @@ function settingsSheet() {
   openSheet(`<h2 id="sheetTitle">Einstellungen</h2>
     <div class="field"><label for="setRace">Renntag in Paris (${esc(S.plan.race.window)})</label><input class="input" type="date" id="setRace" value="${raceDate()}" min="2027-04-08" max="2027-04-12"></div>
     ${settingsExtras()}
-    <p class="muted" style="font-size:12.5px">Übungsfotos: Free Exercise DB (gemeinfrei). Plan Version ${S.plan.version} · Stand ${fmt(pd(S.plan.updated))}${S.garmin && S.garmin.updated ? " · Garmin " + fmt(new Date(S.garmin.updated)) : ""}</p>`);
+    <p class="muted" style="font-size:12.5px">Plan Version ${S.plan.version} · Stand ${fmt(pd(S.plan.updated))}${S.garmin && S.garmin.updated ? " · Garmin " + fmt(new Date(S.garmin.updated)) : ""}</p>`);
   $("#setRace").addEventListener("change", e => { if (e.target.value) { S.settings.raceDate = e.target.value; saveSettings(); renderAll(); toast("Renntag gespeichert"); } });
 }
 function kneeSheet() {
@@ -1133,7 +1133,7 @@ function route() {
 }
 window.addEventListener("hashchange", route);
 function applyTheme() { document.documentElement.setAttribute("data-theme", "dark"); }
-function renderAll() { renderHeute(); renderPlan(); renderUebungen(); renderFortschritt(); countUp($("#v-heute")); }
+function renderAll() { renderHeute(); renderPlan(); renderUebungen(); renderFortschritt(); countUp($("#v-heute")); scanAnim($("#v-heute")); }
 
 /* ---------- Start ---------- */
 /* Persönliche Daten liegen im privaten Repository und werden mit dem eigenen Schlüssel gelesen */
@@ -1180,7 +1180,7 @@ async function load(path, fallback) { try { const r = await fetch(path, { cache:
   privGet("garmin-history.json").then(h => { S.history = h; if (h && S.plan) renderFortschritt(); });
   if (!plan) { $("#v-heute").innerHTML = `<div class="empty"><b>Plan konnte nicht geladen werden.</b><span>Prüfe die Internetverbindung und lade die Seite neu.</span></div>`; return; }
   S.plan = plan; S.garmin = garmin; S.coach = coach; applyProfile();
-  window.ExPhotos = Object.fromEntries(Object.entries(plan.exercises).filter(([, e]) => e.photo).map(([k, e]) => [k, { id: e.photo, fit: e.photoFit }]));
+  window.ExPhotos = {};
   if (S.settings.kneeStage >= plan.kneeStages.length) S.settings.kneeStage = 1;
   renderAll(); route();
   if (S.settings.ghToken) ghSync().then(renderAll).catch(() => {});

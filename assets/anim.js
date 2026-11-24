@@ -70,6 +70,8 @@ const PROP = {
   roller: (g, o) => { const h = P(g[o.on], o.dx || 0, o.dy || 0); return `<circle cx="${h[0].toFixed(1)}" cy="${h[1].toFixed(1)}" r="${o.r || 6}" fill="var(--anim-accent)"/>`; },
   cable: (g, o) => ln(o.from, g[o.on], 1.6, "var(--anim-line)"),
   cableUp: (g, o) => ln([g[o.on][0], 6], g[o.on], 1.6, "var(--anim-line)"),
+  db: (g, o) => { const h = g[o.on]; return ln([h[0] - 6, h[1]], [h[0] + 6, h[1]], 3, "var(--anim-accent)") + `<circle cx="${(h[0] - 7).toFixed(1)}" cy="${h[1].toFixed(1)}" r="4.5" fill="var(--anim-accent)"/><circle cx="${(h[0] + 7).toFixed(1)}" cy="${h[1].toFixed(1)}" r="4.5" fill="var(--anim-accent)"/>`; },
+  bar: (g, o) => { const h = g[o.on]; return `<circle cx="${h[0].toFixed(1)}" cy="${h[1].toFixed(1)}" r="${o.r || 4}" fill="var(--anim-accent)"/>`; },
   band: (g, o) => ln(g[o.a], g[o.b], 3, "var(--anim-accent)"),
   legplate: (g, o) => { const c = P(g.ankle1, 4, -4); return ln([c[0] - 13, c[1] - 13], [c[0] + 13, c[1] + 13], 6, "var(--anim-accent)") + ln(c, [c[0] + 40, c[1] - 40], 3, "var(--anim-prop)"); }
 };
@@ -155,6 +157,43 @@ const A = {
 };
 
 A.gymbike = A.bike;
+A.copenhagen = { ...A.sideplank, frames: A.sideplank.frames.slice(0, 2), mode: undefined, scene: `<rect x="186" y="128" width="46" height="10" rx="3" class="pr-fill"/><path d="M192 138 V168 M226 138 V168" class="pr"/>`, note: "Oberes Bein auf der Bank" };
+A.kbaround = { frames: [
+  { at: "ankle2", x: 100, y: 164, T: 0, L1: [10, 0], L2: [-10, 0], A1: [40, 15], A2: [20, 55], F2: 180 },
+  { at: "ankle2", x: 100, y: 164, T: 0, L1: [10, 0], L2: [-10, 0], A1: [-20, -55], A2: [-40, -15], F2: 180 }],
+  props: [{ k: "kb", on: "hand1" }], note: "Ansicht von vorne" };
+
+
+/* ---------- Weitere Übungen (gym80 und Lieblingsübungen) ---------- */
+Object.assign(A, {
+  benchmachine: { frames: [{ at: "hip", x: 100, y: 126, T: -90, L1: [85, 0], A1: [45, 180] }, { at: "hip", x: 100, y: 126, T: -90, L1: [85, 0], A1: [178, 180] }],
+    scene: `<rect x="24" y="133" width="92" height="9" rx="4" class="pr-fill"/><path d="M40 142 V168 M100 142 V168" class="pr"/><path d="M20 30 V168" class="pr"/>`, props: [{ k: "pad", on: "hand1", len: 22, w: 5, c: "var(--anim-accent)" }] },
+  inclinedb: { frames: [{ at: "hip", x: 100, y: 124, T: -60, L1: [82, 5], A1: [25, 165] }, { at: "hip", x: 100, y: 124, T: -60, L1: [82, 5], A1: [150, 150] }],
+    scene: `<path d="M104 134 L62 62" class="pr" style="stroke-width:9"/><path d="M96 134 H120 M104 134 V168" class="pr"/>`, props: [{ k: "db", on: "hand1" }] },
+  inclinefly: { frames: [{ at: "hip", x: 100, y: 124, T: -60, L1: [82, 5], A1: [70, 85] }, { at: "hip", x: 100, y: 124, T: -60, L1: [82, 5], A1: [150, 152] }],
+    scene: `<path d="M104 134 L62 62" class="pr" style="stroke-width:9"/><path d="M96 134 H120 M104 134 V168" class="pr"/>`, props: [{ k: "grip", on: "hand1" }] },
+  cablechest: { frames: [{ at: "hip", x: 105, y: 128, T: 0, L1: [88, 0], A1: [-70, 92] }, { at: "hip", x: 105, y: 128, T: 0, L1: [88, 0], A1: [86, 90] }],
+    scene: `<path d="M84 136 H126 M105 136 V168 M44 20 V168" class="pr"/><circle cx="44" cy="80" r="4" class="pr"/>`, props: [{ k: "cable", on: "hand1", from: [44, 80] }, { k: "grip", on: "hand1" }] },
+  seatedrow: { frames: [{ at: "hip", x: 92, y: 130, T: 12, L1: [85, 5], A1: [82, 86] }, { at: "hip", x: 92, y: 130, T: 12, L1: [85, 5], A1: [-45, 80] }],
+    scene: `<path d="M72 138 H112 M92 138 V168 M128 70 V120 M150 70 V168" class="pr"/>`, props: [{ k: "grip", on: "hand1" }] },
+  lateralmachine: { frames: [{ at: "ankle2", x: 100, y: 164, T: 0, L1: [8, 0], L2: [-8, 0], A1: [12, 8], A2: [-12, -8], F2: 180 }, { at: "ankle2", x: 100, y: 164, T: 0, L1: [8, 0], L2: [-8, 0], A1: [86, 92], A2: [-86, -92], F2: 180 }], note: "Ansicht von vorne" },
+  reversefly: { frames: [{ at: "hip", x: 120, y: 120, T: 0, L1: [6, 0], L2: [-6, 0], A1: [22, 10], A2: [-22, -10] }, { at: "hip", x: 120, y: 120, T: 0, L1: [6, 0], L2: [-6, 0], A1: [92, 95], A2: [-92, -95] }], note: "Ansicht von hinten" },
+  szcurl: { frames: [{ at: "hip", x: 96, y: 128, T: 18, L1: [88, 0], A1: [55, 60] }, { at: "hip", x: 96, y: 128, T: 18, L1: [88, 0], A1: [55, 165] }],
+    scene: `<path d="M118 92 L150 120" class="pr" style="stroke-width:7"/><path d="M76 136 H112 M96 136 V168 M150 120 V168" class="pr"/>`, props: [{ k: "bar", on: "hand1", r: 5 }] },
+  pushdown: { frames: [{ at: "ankle", x: 112, y: 164, T: 8, L1: [6, -6], L2: [-6, 6], A1: [12, 100] }, { at: "ankle", x: 112, y: 164, T: 8, L1: [6, -6], L2: [-6, 6], A1: [12, 12] }],
+    scene: `<path d="M176 8 V168" class="pr"/><circle cx="168" cy="16" r="4" class="pr"/>`, props: [{ k: "cable", on: "hand1", from: [168, 16] }, { k: "grip", on: "hand1" }] },
+  cablecurl1: { frames: [{ at: "ankle", x: 110, y: 164, T: 0, L1: [6, -6], L2: [-6, 6], A1: [6, 8] }, { at: "ankle", x: 110, y: 164, T: 0, L1: [6, -6], L2: [-6, 6], A1: [8, 160] }],
+    scene: `<path d="M176 8 V168" class="pr"/><circle cx="168" cy="158" r="4" class="pr"/>`, props: [{ k: "cable", on: "hand1", from: [168, 158] }, { k: "grip", on: "hand1" }] },
+  pullup: { frames: [{ at: "hip", x: 118, y: 128, T: 0, L1: [10, -25], hand1: [124, 16], hand2: [112, 16] }, { at: "hip", x: 118, y: 84, T: 0, L1: [20, -35], hand1: [124, 16], hand2: [112, 16] }],
+    scene: `<path d="M70 16 H170 M76 16 V168 M164 16 V168" class="pr"/>` },
+  rdl: { frames: [{ at: "ankle", x: 112, y: 164, T: 0, L1: [4, -4], A1: [0, 0] }, { at: "ankle", x: 112, y: 164, T: 78, L1: [-12, 12], A1: [0, 0] }], props: [{ k: "db", on: "hand1" }] },
+  nordic: { frames: [{ at: "knee", x: 108, y: 160, T: 0, L1: [0, -90], A1: [25, 150], F1: 180 }, { at: "knee", x: 108, y: 160, T: 42, L1: [-42, -90], A1: [80, 120], F1: 180 }],
+    scene: `<rect x="40" y="152" width="30" height="10" rx="4" class="pr-fill"/>` },
+  dbpress: { frames: [{ at: "hip", x: 105, y: 126, T: -6, L1: [88, 3], A1: [15, 175] }, { at: "hip", x: 105, y: 126, T: -6, L1: [88, 3], A1: [178, 178] }],
+    scene: `<path d="M96 134 L88 60" class="pr" style="stroke-width:8"/><path d="M88 134 H128 M105 134 V168" class="pr"/>`, props: [{ k: "db", on: "hand1" }] }
+});
+A.facepull = { frames: [{ at: "hip", x: 90, y: 158, T: -8, L1: [86, 92], A1: [105, 100], F1: -80 }, { at: "hip", x: 90, y: 158, T: -8, L1: [86, 92], A1: [168, 60], F1: -80 }],
+  scene: `<path d="M226 8 V168" class="pr"/><circle cx="226" cy="104" r="4" class="pr"/>`, props: [{ k: "cable", on: "hand1", from: [226, 104] }, { k: "grip", on: "hand1" }] };
 
 /* ---------- Zeichnen ---------- */
 function crankPose(a, t) {
@@ -184,16 +223,24 @@ function draw(id, t, still) {
     }
   }
   const g = geom(p);
-  const near = "var(--anim-fg)", far = "var(--anim-far)";
-  const limb = (pts, c, w) => `<polyline points="${pts.map(q => q[0].toFixed(1) + "," + q[1].toFixed(1)).join(" ")}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
-  let s = `<line x1="4" y1="168.5" x2="236" y2="168.5" stroke="var(--anim-line)" stroke-width="1"/>` + (a.scene || "");
-  const props = (a.props || []).map(o => PROP[o.k](g, o, ball)).join("");
-  s += limb([g.hip, g.knee2, g.ankle2, g.toe2], far, 7);
-  s += limb([g.shoulder, g.elbow2, g.hand2], far, 6);
-  s += limb([g.hip, g.shoulder, g.neck], near, 10);
-  s += `<circle cx="${g.head[0].toFixed(1)}" cy="${g.head[1].toFixed(1)}" r="${LEN.head}" fill="${near}"/>`;
-  s += limb([g.hip, g.knee1, g.ankle1, g.toe1], near, 8);
-  s += limb([g.shoulder, g.elbow1, g.hand1], near, 7);
+  // Charakter: verjüngte Gliedmassen, Shirt in der Farbe der Einheit, Shorts, Schuhe, Haare
+  const f = n => n.toFixed(1);
+  const taper = (a, b, r1, r2, c) => {
+    const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+    return `<path d="M${f(a[0] + nx * r1)} ${f(a[1] + ny * r1)}L${f(b[0] + nx * r2)} ${f(b[1] + ny * r2)}L${f(b[0] - nx * r2)} ${f(b[1] - ny * r2)}L${f(a[0] - nx * r1)} ${f(a[1] - ny * r1)}Z" fill="${c}"/><circle cx="${f(a[0])}" cy="${f(a[1])}" r="${r1}" fill="${c}"/><circle cx="${f(b[0])}" cy="${f(b[1])}" r="${r2}" fill="${c}"/>`;
+  };
+  const mixP = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  const C = far => ({ skin: far ? "var(--ch-skin2)" : "var(--ch-skin)", shirt: far ? "var(--ch-shirt2)" : "var(--ch-shirt)", shorts: far ? "var(--ch-shorts2)" : "var(--ch-shorts)", shoe: far ? "var(--ch-shoe2)" : "var(--ch-shoe)" });
+  const leg = (n, c) => taper(g.hip, g["knee" + n], 7, 5.2, c.skin) + taper(g["knee" + n], g["ankle" + n], 5.2, 3.6, c.skin) + taper(g.hip, mixP(g.hip, g["knee" + n], .55), 7.8, 6.8, c.shorts) + taper(g["ankle" + n], g["toe" + n], 4, 3.2, c.shoe);
+  const arm = (n, c) => taper(g.shoulder, g["elbow" + n], 5, 4, c.skin) + taper(g["elbow" + n], g["hand" + n], 4, 3, c.skin) + taper(g.shoulder, mixP(g.shoulder, g["elbow" + n], .42), 5.8, 5.4, c.shirt) + `<circle cx="${f(g["hand" + n][0])}" cy="${f(g["hand" + n][1])}" r="3.4" fill="${c.skin}"/>`;
+  const T = (p.T || 0) * R, fw = [Math.cos(T), Math.sin(T)];
+  let s = `<line x1="4" y1="168.5" x2="236" y2="168.5" stroke="var(--anim-line)" stroke-width="1"/>` + (a.scene || "") + `<g stroke="none">`;
+  const props = (a.props || []).map(o => PROP[o.k](g, o, ball)).join("") + `</g>`;
+  const N = C(false), F = C(true);
+  s += leg(2, F) + arm(2, F);
+  s += `<circle cx="${f(g.hip[0])}" cy="${f(g.hip[1])}" r="8.6" fill="var(--ch-shorts)"/>` + taper(g.hip, g.shoulder, 8.8, 10.6, N.shirt) + taper(g.shoulder, g.neck, 3.6, 3.6, N.skin);
+  s += `<circle cx="${f(g.head[0] - fw[0] * 1.8)}" cy="${f(g.head[1] - fw[1] * 1.8 - 0.8)}" r="9" fill="var(--ch-hair)"/><circle cx="${f(g.head[0] + fw[0] * 0.9)}" cy="${f(g.head[1] + fw[1] * 0.9 + 0.6)}" r="8.2" fill="${N.skin}"/>`;
+  s += leg(1, N) + arm(1, N);
   return s + props;
 }
 

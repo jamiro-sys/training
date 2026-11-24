@@ -571,3 +571,9 @@ h1,h2,h3,h4{font-family:var(--f-display);font-weight:700;letter-spacing:-.005em}
 .zseg b{font:800 20px/1 var(--f-display)}
 .zh2{font-size:11.5px;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){.zbar-c{animation:none}}
+.fav{font-style:normal;color:var(--gym);font-size:.8em;vertical-align:1px}
+/* Animierter Charakter */
+:root{--ch-skin:#E8B38F;--ch-skin2:#A97A5C;--ch-shirt:var(--c,var(--accent));--ch-shirt2:color-mix(in srgb,var(--c,var(--accent)) 55%,#05070A);--ch-shorts:#3A414B;--ch-shorts2:#232830;--ch-shoe:#F4F6F8;--ch-shoe2:#7F8792;--ch-hair:#2A211C}
+.thumb-anim{display:inline-block;width:52px;height:40px;border-radius:12px;background:var(--surface-2);border:2px solid var(--surface);margin-right:-10px;overflow:hidden}
+.thumb-anim svg{width:100%;height:100%}
+.thumbs .thumb-anim:nth-child(1){--c:var(--accent)}
