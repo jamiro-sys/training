@@ -41,6 +41,31 @@ for (const a of acts) hist.activities[a.id] = {
 hist.updated = new Date().toISOString();
 await writeFile(`${DIR}/garmin-history.json`, JSON.stringify(hist) + "\n");
 
+// Pulszonen automatisch: klassisches 5 Zonen Modell in Prozent der HFmax.
+// HFmax = höchster plausibler Maximalpuls der letzten 12 Monate, Ruhepuls = Schnitt der letzten 28 Tage.
+{
+  const since = iso(new Date(today.getTime() - 365 * 864e5)), since28 = iso(new Date(today.getTime() - 28 * 864e5));
+  const maxs = Object.values(hist.activities).filter(a => a.date >= since && a.maxHr && a.maxHr < 215).map(a => a.maxHr).sort((a, b) => b - a);
+  const hfMax = maxs.length >= 3 ? Math.round((maxs[0] + maxs[1] + maxs[2]) / 3) : (maxs[0] || null);
+  const rhr = Object.entries(hist.days).filter(([d, v]) => d >= since28 && v.restingHr).map(([, v]) => v.restingHr);
+  const hrv = Object.entries(hist.days).filter(([d, v]) => d >= since28 && v.hrv).map(([, v]) => v.hrv);
+  if (hfMax) {
+    const prof = JSON.parse(await readFile(`${DIR}/profil.json`, "utf8").catch(() => "{}"));
+    const P = [[50, 60, "Erholung", "Ausrollen, lockere Tage"], [60, 70, "Grundlage", "Rolle und lockere Läufe, sprechen in ganzen Sätzen"], [70, 80, "Aerob", "zügige Dauerläufe, Hyrox Renntempo"], [80, 90, "Schwelle", "Intervalle 4 bis 8 Minuten"], [90, 100, "Maximal", "kurze Antritte, Spielszenen"]];
+    prof.model = "5 Zonen, Prozent der HFmax";
+    prof.hfMax = hfMax;
+    prof.hfMaxSource = `Schnitt der 3 höchsten Maximalpulse aus ${maxs.length} Aktivitäten der letzten 12 Monate`;
+    if (rhr.length) prof.hfRest = Math.round(rhr.reduce((a, b) => a + b, 0) / rhr.length);
+    if (hrv.length) prof.hrvBase = Math.round(hrv.reduce((a, b) => a + b, 0) / hrv.length);
+    prof.zones = P.map(([lo, hi, name, use], i) => ({ z: "Zone " + (i + 1), name, use, pct: `${lo} bis ${hi} %`, lo: Math.round(hfMax * lo / 100), hi: Math.round(hfMax * hi / 100) }));
+    prof.zoneHf = Object.fromEntries(prof.zones.map((z, i) => [i + 1, `${z.lo} bis ${z.hi}`]));
+    prof.bikeHf = prof.zoneHf;
+    prof.sleepTarget = prof.sleepTarget || 7.5;
+    prof.zonesUpdated = new Date().toISOString();
+    await writeFile(`${DIR}/profil.json`, JSON.stringify(prof, null, 1) + "\n");
+  }
+}
+
 const runKm = {}, bikeMin = {};
 for (const a of acts) {
   const d = String(a.start_date_local || "").slice(0, 10), t = String(a.type || "");

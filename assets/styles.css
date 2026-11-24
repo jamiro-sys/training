@@ -559,3 +559,15 @@ h1,h2,h3,h4{font-family:var(--f-display);font-weight:700;letter-spacing:-.005em}
 .zr .num{font-weight:700;font-size:15px}
 .zd{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--zc);margin-right:8px;vertical-align:1px}
 .znotes{margin:12px 0 0;padding-left:18px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;gap:4px}
+/* Zonenleiste auf Heute */
+:root{--z1:#7C8792;--z2:#1FA3FF;--z3:#2EE6A6;--z4:#FF9F43;--z5:#FF4D6A}
+.zstrip{all:unset;box-sizing:border-box;display:block;cursor:pointer;margin-bottom:14px;width:100%}
+.zstrip:focus-visible{outline:2px solid var(--accent)}
+.zbar{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+.zseg{display:flex;flex-direction:column;gap:3px;min-width:0}
+.zbar-c{height:6px;border-radius:99px;background:var(--zc);transform-origin:left;animation:zin .7s var(--ease) both;animation-delay:calc(var(--d) * 70ms)}
+@keyframes zin{from{transform:scaleX(0);opacity:0}}
+.zn{font:700 10.5px/1 var(--f-body);letter-spacing:.12em;color:var(--zc);margin-top:6px}
+.zseg b{font:800 20px/1 var(--f-display)}
+.zh2{font-size:11.5px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.zbar-c{animation:none}}

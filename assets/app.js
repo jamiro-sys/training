@@ -164,6 +164,7 @@ function renderHeute() {
     <header class="head"><div><p class="eyebrow">${DL[wd(t)]}, ${fmt(t)} · KW ${kw(t)}${p ? " · " + esc(p.name) : ""}</p><h1 id="h-heute">Heute</h1></div>
       <button class="icon-btn" data-open="settings" aria-label="Einstellungen"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button></header>
     ${dialsHtml()}
+    ${zoneStrip()}
     ${pend ? `<div class="banner t-${sess(pend.k).type}"><span class="dot"></span><div class="tx"><b>Training läuft: ${esc(sess(pend.k).name)}</b><span>Übung ${pend.i + 1} von ${sess(pend.k).blocks.reduce((a, b) => a + b.items.length, 0)}</span></div><button class="btn accent small" data-resume>Fortsetzen</button><button class="icon-btn" data-resume="drop" aria-label="Laufendes Training verwerfen">${ICON.close}</button></div>` : ""}
     ${!S.settings.introDone ? `<div class="card intro"><div class="card-h"><h3>So funktioniert die App</h3></div><ol class="howlist"><li><span><b>Training starten</b> führt dich Übung für Übung durch. Haken setzen, die Pause läuft automatisch.</span></li><li><span><b>Gewichte</b> werden vorgeschlagen. Schaffst du alle Wiederholungen, legt die App automatisch drauf.</span></li><li><span><b>Nach dem Training</b> Anstrengung und Knie bewerten. Daraus passe ich den Plan an.</span></li><li><span>Tippe auf einen <b>Tag in der Woche</b> oder ein <b>Übungsbild</b>, um Details zu sehen.</span></li></ol><button class="btn primary small" data-intro style="margin-top:14px">Verstanden</button></div>` : ""}
     <div class="grid today">
@@ -1065,6 +1066,7 @@ document.addEventListener("click", async e => {
   const q = sel => e.target.closest(sel);
   let b;
   if ((b = q("[data-dial]"))) return dialSheet(b.dataset.dial);
+  if (q("[data-zones]")) { openSheet(`<h2 id="sheetTitle">Pulszonen</h2>${zonesCard()}`); return; }
   if ((b = q("[data-kneeset]"))) { setKnee(+b.dataset.kneeset); renderAll(); return toast("Knie Stufe " + S.settings.kneeStage); }
   if ((b = q("[data-review]"))) return reviewSheet(pd(b.dataset.review));
   if ((b = q("[data-bench]"))) return benchSheet();
@@ -1147,18 +1149,24 @@ async function privGet(path) {
 function applyProfile() {
   const pr = S.profile; if (!pr || !S.plan || S.plan._personal) return;
   Object.values(S.plan.sessions).forEach(s => s.blocks.forEach(b => b.items.forEach(it => {
-    const bike = it.ex === "bike" || it.ex === "gymbike", map = bike ? pr.bikeHf : pr.zoneHf;
+    const bike = it.ex === "bike" || it.ex === "gymbike", map = (bike && pr.bikeHf) || pr.zoneHf;
     it.reps = it.reps.replace(/Zone (\d)\b(?! \()/g, (m, z) => map && map[z] ? `${m} (Puls ${map[z]})` : m);
     Object.entries(pr.paceMap || {}).forEach(([k, v]) => { it.reps = it.reps.replace(k, `${k} ${v}`); });
   })));
   S.plan._personal = true;
 }
 function zonesCard() {
-  const pr = S.profile; if (!pr) return "";
-  return `<div class="card zones" style="margin-bottom:14px"><div class="card-h"><h3>Deine Zonen</h3><span class="muted" style="font-size:12px">aus Garmin · HFmax ${pr.hfMax}</span></div>
-    <div class="ztab"><div class="zr zh"><span>Zone</span><span>Laufen</span><span>Velo</span></div>${pr.zones.map((z, i) => `<div class="zr"><span><i class="zd" style="--zc:var(--z${i + 1})"></i><b>${esc(z.z)}</b> ${esc(z.name)}</span><span class="num">${esc(pr.zoneHf[i + 1])}</span><span class="num">${esc(pr.bikeHf[i + 1])}</span></div>`).join("")}</div>
-    <div class="items" style="margin-top:12px">${pr.paces.map(x => `<div class="item static"><span class="tx"><b>${esc(x.name)}</b></span><span class="dose">${esc(x.pace)}</span></div>`).join("")}</div>
-    <ul class="znotes">${pr.notes.map(n => `<li>${esc(n)}</li>`).join("")}</ul></div>`;
+  const pr = S.profile; if (!pr || !pr.zones || pr.zones[0].lo == null) return "";
+  return `<div class="card zones" style="margin-bottom:14px"><div class="card-h"><h3>Deine Pulszonen</h3><span class="muted" style="font-size:12px">${esc(pr.model || "5 Zonen")}</span></div>
+    <div class="ztab"><div class="zr zh"><span>Zone</span><span>Puls</span><span>HFmax</span></div>${pr.zones.map((z, i) => `<div class="zr"><span><i class="zd" style="--zc:var(--z${i + 1})"></i><b>${esc(z.z)}</b> ${esc(z.name)}</span><span class="num">${z.lo} bis ${z.hi}</span><span class="muted">${esc(z.pct)}</span></div>`).join("")}</div>
+    <div class="items" style="margin-top:12px">${pr.zones.map((z, i) => `<div class="item static"><span class="tx"><b>Zone ${i + 1}</b><span>${esc(z.use)}</span></span></div>`).join("")}</div>
+    ${pr.paces ? `<p class="block-t" style="margin-top:14px">Lauftempo</p><div class="items">${pr.paces.map(x => `<div class="item static"><span class="tx"><b>${esc(x.name)}</b></span><span class="dose">${esc(x.pace)}</span></div>`).join("")}</div>` : ""}
+    <p class="muted" style="font-size:12.5px;margin-top:12px">HFmax ${pr.hfMax}: ${esc(pr.hfMaxSource || "aus deinen Garmin Aktivitäten")}. Ruhepuls ${pr.hfRest ?? "?"}, HRV ${pr.hrvBase ?? "?"} (Schnitt 28 Tage). Wird bei jedem Garmin Sync automatisch neu berechnet${pr.zonesUpdated ? ", zuletzt " + new Date(pr.zonesUpdated).toLocaleString("de-CH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}. Auf dem Velo liegt der Puls meist 5 bis 10 Schläge tiefer.</p></div>`;
+}
+function zoneStrip() {
+  const pr = S.profile; if (!pr || !pr.zones || pr.zones[0].lo == null) return "";
+  return `<button class="card span zstrip" data-zones aria-label="Pulszonen anzeigen"><div class="card-h" style="margin-bottom:12px"><h3>Pulszonen</h3><span class="muted num" style="font-size:12px">HFmax ${pr.hfMax} · Ruhe ${pr.hfRest ?? "?"}</span></div>
+    <div class="zbar">${pr.zones.map((z, i) => `<div class="zseg" style="--zc:var(--z${i + 1});--d:${i}"><span class="zbar-c"></span><span class="zn">Z${i + 1}</span><b class="num">${z.lo}</b><span class="zh2">bis ${z.hi}</span></div>`).join("")}</div></button>`;
 }
 async function reloadPrivate() {
   const [g, c, h, pr] = await Promise.all([privGet("garmin.json"), privGet("coach.json"), privGet("garmin-history.json"), privGet("profil.json")]);

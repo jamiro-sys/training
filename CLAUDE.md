@@ -5,7 +5,7 @@ Statische Trainings App (GitHub Pages, Branch `main`, Root). Kein Build Schritt.
 - `index.html`, `assets/styles.css`, `assets/app.js`: App
 - `data/plan.json`: Phasen, Einheiten, Übungen, Knie Stufen
 - Persönliche Daten liegen NICHT hier, sondern im privaten Repository `jamiro-sys/training-data`:
-  `garmin.json` (letzte 42 Tage), `garmin-history.json` (Archiv aller Tage und Aktivitäten, wird nie gekürzt), `coach.json` (Coach Notiz), `logbuch.json` (Einträge der App), `profil.json` (Pulszonen, Tempi, HFmax, Ruhepuls, HRV Basis, Schlafziel; die App setzt die Werte in "Zone N" und Tempo Begriffe der Einheiten ein). Die App liest sie mit dem Schlüssel aus den Einstellungen. Nie persönliche Daten ins öffentliche Repository schreiben.
+  `garmin.json` (letzte 42 Tage), `garmin-history.json` (Archiv aller Tage und Aktivitäten, wird nie gekürzt), `coach.json` (Coach Notiz), `logbuch.json` (Einträge der App), `profil.json` (Pulszonen nach dem klassischen 5 Zonen Modell in Prozent der HFmax, vom Garmin Sync bei jedem Lauf automatisch neu berechnet; dazu Tempi, Ruhepuls, HRV Basis, Schlafziel; die App setzt die Werte in "Zone N" und Tempo Begriffe der Einheiten ein). Die App liest sie mit dem Schlüssel aus den Einstellungen. Nie persönliche Daten ins öffentliche Repository schreiben.
 
 ## Schreibstil
 Deutsch (Schweiz). Kein scharfes s (immer "ss"), keine Gedankenstriche (– oder —) und kein " - " als Satzzeichen.
