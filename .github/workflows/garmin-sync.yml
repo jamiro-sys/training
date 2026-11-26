@@ -1,7 +1,7 @@
 name: Garmin Sync
 
 # Holt Garmin Daten über intervals.icu (ganze Historie beim ersten Lauf) und speichert sie im PRIVATEN Repository jamiro-sys/training-data.
-# Secrets: INTERVALS_API_KEY, INTERVALS_ATHLETE_ID, DATA_REPO_TOKEN (Fine grained token mit Contents Lesen und Schreiben für training-data)
+# Secrets: INTERVALS_API_KEY, INTERVALS_ATHLETE_ID, DATA_REPO_TOKEN, optional STRAVA_CLIENT_ID und STRAVA_CLIENT_SECRET (Fine grained token mit Contents Lesen und Schreiben für training-data)
 
 on:
   schedule:
@@ -55,6 +55,8 @@ jobs:
         env:
           INTERVALS_API_KEY: ${{ secrets.INTERVALS_API_KEY }}
           INTERVALS_ATHLETE_ID: ${{ secrets.INTERVALS_ATHLETE_ID }}
+          STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
+          STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
           DATA_DIR: private
         run: node scripts/garmin-sync.mjs
       - name: Im privaten Repository speichern
@@ -65,5 +67,7 @@ jobs:
           git config user.name "garmin-sync"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add garmin.json garmin-history.json profil.json
+          [ -f strava-token.json ] && git add strava-token.json
           git commit -m "Update Garmin $(date -u +%F)"
+          git pull --rebase -q || true
           git push

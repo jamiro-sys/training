@@ -33,11 +33,51 @@ for (const w of wellness) hist.days[w.id] = {
   readiness: num(w.readiness), weight: num(w.weight, 10), steps: num(w.steps), stress: num(w.stress), spO2: num(w.spO2),
   ctl: num(w.ctl, 10), atl: num(w.atl, 10)
 };
-for (const a of acts) hist.activities[a.id] = {
-  date: String(a.start_date_local || "").slice(0, 10), type: a.type, name: a.name,
+for (const a of acts) if (!a._note && a.moving_time != null) hist.activities[a.id] = {
+  date: String(a.start_date_local || "").slice(0, 10), start: String(a.start_date_local || "").slice(0, 16) || null, src: "garmin", type: a.type, name: a.name,
   durMin: a.moving_time ? Math.round(a.moving_time / 60) : null, km: a.distance ? num(a.distance / 1000, 100) : null,
   avgHr: num(a.average_heartrate), maxHr: num(a.max_heartrate), load: num(a.icu_training_load), elev: num(a.total_elevation_gain)
 };
+// Strava: alle Aktivitäten, auch die ohne Garmin (Zwift, Whoop, Gym). Token liegt im privaten Repository,
+// Client ID und Secret der eigenen Strava API App als Secrets STRAVA_CLIENT_ID und STRAVA_CLIENT_SECRET.
+const SID = process.env.STRAVA_CLIENT_ID, SSEC = process.env.STRAVA_CLIENT_SECRET, tokPath = `${DIR}/strava-token.json`;
+const fam = t => /Soccer|Football/i.test(t) ? "football" : /Run/i.test(t) ? "run" : /Ride|Cycl|Bike/i.test(t) ? "bike" : /Row|Ski/i.test(t) ? "row" : /Weight|Strength|Crossfit|HIIT|Workout/i.test(t) ? "gym" : "other";
+function isDup(a) {
+  return Object.values(hist.activities).some(g => g.src !== "strava" && g.date === a.date && fam(g.type) === fam(a.type) && (
+    g.start && a.start ? Math.abs(Date.parse(g.start + ":00Z") - Date.parse(a.start + ":00Z")) <= 15 * 60e3 : Math.abs((g.durMin || 0) - (a.durMin || 0)) <= Math.max(5, 0.2 * (a.durMin || 0))));
+}
+let stok = JSON.parse(await readFile(tokPath, "utf8").catch(() => "null"));
+if (stok && stok.refresh_token && SID && SSEC) {
+  try {
+    if (!stok.access_token || (stok.expires_at || 0) * 1000 < Date.now() + 120e3) {
+      const r = await fetch("https://www.strava.com/oauth/token", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ client_id: SID, client_secret: SSEC, grant_type: "refresh_token", refresh_token: stok.refresh_token }) });
+      if (!r.ok) throw new Error("Token erneuern: HTTP " + r.status);
+      const j = await r.json();
+      stok = { ...stok, access_token: j.access_token, refresh_token: j.refresh_token, expires_at: j.expires_at, updated: new Date().toISOString() };
+      await writeFile(tokPath, JSON.stringify(stok, null, 1) + "\n");
+    }
+    // Beim ersten Mal die ganze Historie ab 2024, danach die letzten 42 Tage
+    const after = Math.floor((hist.stravaFull ? today.getTime() - 41 * 864e5 : Date.parse("2024-01-01T00:00:00Z")) / 1000);
+    let list = [];
+    for (let page = 1; page <= 20; page++) {
+      const r = await fetch(`https://www.strava.com/api/v3/athlete/activities?after=${after}&per_page=100&page=${page}`, { headers: { Authorization: "Bearer " + stok.access_token } });
+      if (!r.ok) throw new Error("Aktivitäten: HTTP " + r.status);
+      const j = await r.json(); list = list.concat(j); if (j.length < 100) break;
+    }
+    let added = 0, dup = 0;
+    for (const x of list) {
+      const t = x.sport_type || x.type, sec = x.moving_time || x.elapsed_time || 0;
+      const a = { date: String(x.start_date_local || "").slice(0, 10), start: String(x.start_date_local || "").slice(0, 16), src: "strava", device: x.device_name || null, type: t, name: x.name,
+        durMin: sec ? Math.round(sec / 60) : null, km: x.distance ? num(x.distance / 1000, 100) : null, avgHr: num(x.average_heartrate), maxHr: num(x.max_heartrate),
+        load: null, effort: num(x.suffer_score), watts: num(x.average_watts), kj: num(x.kilojoules), elev: num(x.total_elevation_gain) };
+      if (isDup(a)) { dup++; delete hist.activities["s" + x.id]; continue; }
+      hist.activities["s" + x.id] = a; added++;
+    }
+    hist.stravaFull = true;
+    console.log(`Strava: ${added} Aktivitäten übernommen, ${dup} schon über Garmin vorhanden.`);
+  } catch (e) { console.log("Strava übersprungen: " + e.message); }
+} else if (stok) console.log("Strava: Secrets STRAVA_CLIENT_ID und STRAVA_CLIENT_SECRET fehlen.");
+
 hist.updated = new Date().toISOString();
 await writeFile(`${DIR}/garmin-history.json`, JSON.stringify(hist) + "\n");
 
@@ -101,12 +141,13 @@ if (last) {
   readiness = { score, label: score >= 70 ? "Bereit" : score >= 45 ? "Normal" : "Erholen", hrv: last.hrv, restingHr: last.restingHr, sleepH: last.sleepH, bodyBattery: last.bodyBattery, date: last.date };
 }
 
-const activities = acts.filter(a => String(a.start_date_local).slice(0, 10) >= cut)
-  .sort((a, b) => String(b.start_date_local).localeCompare(String(a.start_date_local)))
-  .slice(0, 14)
-  .map(a => ({ date: String(a.start_date_local).slice(0, 10), type: a.type, name: a.name, durMin: a.moving_time ? Math.round(a.moving_time / 60) : null, km: a.distance ? num(a.distance / 1000, 10) : null, avgHr: num(a.average_heartrate) }));
+// Letzte Aktivitäten aus dem Archiv, Garmin und Strava zusammen
+const activities = Object.entries(hist.activities).filter(([, a]) => a.date >= cut)
+  .sort((a, b) => String(b[1].start || b[1].date).localeCompare(String(a[1].start || a[1].date)))
+  .slice(0, 20)
+  .map(([id, a]) => ({ id, date: a.date, type: a.type, name: a.name, src: a.src || "garmin", device: a.device || null, durMin: a.durMin, km: a.km != null ? num(a.km, 10) : null, avgHr: a.avgHr }));
 
-const out = { updated: new Date().toISOString(), source: "intervals.icu (Garmin)", readiness, days, activities };
+const out = { updated: new Date().toISOString(), source: "intervals.icu (Garmin) und Strava", readiness, days, activities };
 const prev = await readFile(`${DIR}/garmin.json`, "utf8").catch(() => "");
 const strip = s => s.replace(/"updated":\s*"[^"]*"/, "");
 const next = JSON.stringify(out, null, 1) + "\n";

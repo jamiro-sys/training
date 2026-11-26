@@ -45,8 +45,10 @@ const S = {
   body: store.get("body", []),
   checkins: store.get("checkins", {}),
   bench: store.get("bench", []), sims: store.get("sims", []), suppLog: store.get("suppLog", {}), deleted: store.get("deleted", []),
+  notes: store.get("notes", {}), custom: store.get("custom", {}), stravaTok: store.get("stravaTok", null), stravaLive: store.get("stravaLive", []),
+  feedDays: 21, gen: null, genOut: null, genSeed: 0,
   settings: Object.assign({ kneeStage: 1, raceDate: null, theme: "system", targetMin: 80 }, store.get("settings", {})),
-  week: monday(now()), planMode: "woche", exCat: "Alle", exQ: ""
+  week: monday(now()), planMode: "vorschlag", exCat: "Alle", exQ: ""
 };
 const saveLogs = () => { store.set("logs", S.logs); scheduleSync(); };
 const saveSettings = () => store.set("settings", S.settings);
@@ -67,25 +69,34 @@ function sessionsFor(d) {
 }
 const sess = k => S.plan.sessions[k];
 /* App Einträge und Garmin Aktivitäten greifen ineinander: gleiche Einheit am gleichen Tag wird zusammengeführt */
-const GTYPE = t => /Soccer|Football/i.test(t) ? "football" : /Run/i.test(t) ? "run" : /Ride|Cycl|Bike/i.test(t) ? "bike" : /Row|Ski/i.test(t) ? "row" : /Weight|Strength/i.test(t) ? "gym" : /HIIT|Hyrox|Interval|Cardio|Crossfit/i.test(t) ? "hyrox" : /Hike/i.test(t) ? "hike" : "other";
+const GTYPE = t => /Soccer|Football/i.test(t) ? "football" : /Run/i.test(t) ? "run" : /Ride|Cycl|Bike/i.test(t) ? "bike" : /Row|Ski/i.test(t) ? "row" : /Weight|Strength|Workout|Crossfit/i.test(t) ? "gym" : /HIIT|Hyrox|Interval|Cardio|Crossfit/i.test(t) ? "hyrox" : /Hike/i.test(t) ? "hike" : "other";
 const SESS_G = { football: ["football"], gym: ["gym", "hyrox"], hyrox: ["hyrox", "gym", "row", "run"], endurance: ["bike", "run", "row", "hike"], accent: ["run", "hyrox"] };
-const gActs = () => { const h = S.history && S.history.activities; return h ? Object.values(h) : ((S.garmin && S.garmin.activities) || []); };
+let _acts = null;
+const gActs = () => {
+  if (_acts) return _acts;
+  const h = S.history && S.history.activities;
+  const a = h ? Object.entries(h).map(([id, x]) => ({ id, ...x })) : ((S.garmin && S.garmin.activities) || []).map((x, i) => ({ id: x.id || "g" + i, ...x }));
+  const have = new Set(a.map(x => x.id));
+  (S.stravaLive || []).forEach(x => { if (!have.has(x.id) && !actDup(x, a)) a.push(x); });
+  return (_acts = a);
+};
 function sessMatches(k, act) {
-  const s = sess(k); if (!s || ["dehnen", "mob", "knie", "ruhe"].includes(k)) return false;
+  const s = sess(k); if (!s || ["dehnen", "mob", "knie", "ruhe", "x_mob"].includes(k)) return false;
   const g = GTYPE(act.type);
+  if (FREE[k]) return FREE[k][2].includes(g);
   if (k === "fbLauf" || k === "homeRun") return g === "run" || g === "football";
   return (SESS_G[s.type] || []).includes(g);
 }
 const _dayCache = new Map();
 function dayEntries(date) {
   if (_dayCache.has(date)) return _dayCache.get(date);
-  const logs = S.logs.filter(l => l.date === date && !["dehnen", "mob", "knie"].includes(l.session));
-  const acts = gActs().filter(a => a.date === date && !["other"].includes(GTYPE(a.type)) && (a.durMin || 0) >= 10);
+  const logs = S.logs.filter(l => l.date === date && !LIGHT.includes(l.session));
+  const acts = gActs().filter(a => a.date === date && !/Walk/i.test(a.type || "") && (a.durMin || 0) >= 10).sort((x, y) => String(x.start || "").localeCompare(String(y.start || "")));
   const used = new Set(), out = [];
   logs.forEach(l => {
-    const j = acts.findIndex((a, i) => !used.has(i) && sessMatches(l.session, a)); const a = j >= 0 ? acts[j] : null; if (a) used.add(j);
+    let j = l.actId ? acts.findIndex(a => a.id === l.actId) : -1; if (j < 0 && !l.actId) j = acts.findIndex((a, i) => !used.has(i) && sessMatches(l.session, a)); const a = j >= 0 ? acts[j] : null; if (a) used.add(j);
     const s = sess(l.session);
-    out.push({ date, group: s ? (s.type === "accent" ? "hyrox" : s.type) : "gym", dur: a && a.durMin ? a.durMin : (l.dur || 0), rpe: l.rpe || (a ? rpeFromHr(a.avgHr) : 5), log: l, act: a, name: s ? s.name : "Einheit" });
+    out.push({ date, group: s ? (s.type === "accent" ? "hyrox" : s.type) : "gym", dur: a && a.durMin ? a.durMin : (l.dur || 0), rpe: l.rpe || (a ? rpeFromHr(a.avgHr) : 5), log: l, act: a, name: l.title || (s ? s.name : "Einheit") });
   });
   acts.forEach((a, i) => { if (used.has(i)) return; const g = GTYPE(a.type); out.push({ date, group: g === "football" ? "football" : g === "gym" ? "gym" : g === "hyrox" ? "hyrox" : "endurance", dur: a.durMin || 0, rpe: rpeFromHr(a.avgHr), act: a, name: a.name }); });
   _dayCache.set(date, out); return out;
@@ -141,91 +152,32 @@ const scoreTxt = v => v >= 70 ? "Bereit für Vollgas" : v >= 45 ? "Normal traini
 
 /* ---------- Heute ---------- */
 function renderHeute() {
-  const t = now(), p = phaseOf(t), rd = pd(raceDate());
-  const list = sessionsFor(t);
-  const main = list.find(k => sess(k).dur) || list[0] || "ruhe";
-  const s = sess(main);
-  const done = isDone(iso(t), main);
-  const left = Math.max(0, days(t, rd));
-  const extra = list.filter(k => k !== main).map(k => sess(k).name);
-  let nextD = null, nextK = null;
-  if (!s.dur || done) for (let i = 1; i <= 7 && !nextK; i++) { const d = addD(t, i); const k = sessionsFor(d).find(x => sess(x).dur); if (k) { nextD = d; nextK = k; } }
+  const t = now(), T = iso(t), p = phaseOf(t), rd = pd(raceDate()), left = Math.max(0, days(t, rd));
+  const list = sessionsFor(t), main = list.find(k => sess(k).dur) || list[0] || "ruhe", s = sess(main), done = isDone(T, main);
   const pend = pendingPlayer();
-  const nEx = s.blocks.reduce((a, b) => a + b.items.length, 0);
-  const photos = [...new Set(s.blocks.flatMap(b => b.items.map(i => i.ex)).filter(x => x && window.ExAnim && window.ExAnim.has(x)))].slice(0, 4);
-
-  const ph = S.plan.phases.filter(x => x.from <= raceDate());
-  const track = ph.map(x => { const a = pd(x.from), b = pd(x.to), tot = days(a, b) + 1, pr = Math.max(0, Math.min(1, (days(a, t) + 1) / tot)); return `<span class="t-${x.color}" title="${esc(x.name)}"><i style="width:${(t < a ? 0 : pr) * 100}%"></i></span>`; }).join("");
-
-  // Tagesform
   const r = readinessToday();
-  let form;
-  if (r) form = "";
-  else if (false) {
-    const kv = r.src === "garmin"
-      ? `<div><b class="num">${r.g.hrv ?? "-"}</b><span>HRV ms</span></div><div><b class="num">${r.g.restingHr ?? "-"}</b><span>Ruhepuls</span></div><div><b class="num">${r.g.sleepH ?? (sleepFor(iso(addD(now(), -1))) || {}).h ?? "-"}</b><span>Schlaf h</span></div><div><b class="num">${r.g.bodyBattery ?? "-"}</b><span>Body Battery</span></div>`
-      : `<div><b class="num">${r.c.sleep}/5</b><span>Schlaf</span></div><div><b class="num">${r.c.energy}/5</b><span>Energie</span></div><div><b class="num">${r.c.sore}/5</b><span>Muskelkater</span></div><div><button class="link" data-checkin="edit">Ändern</button></div>`;
-    form = `<div class="card"><div class="card-h"><h3>Tagesform</h3><span class="pill">${r.src === "garmin" ? "Garmin" : "Check in"}</span></div>
-      <div class="ring-wrap"><div class="ring">${ring(r.score / 100, scoreCol(r.score))}<div class="v"><div><b>${r.score}</b><span>von 100</span></div></div></div><div class="kv">${kv}</div></div>
-      <p class="form-tip" style="--c:${scoreCol(r.score)}">${scoreTxt(r.score)}${r.score < 45 && s.dur ? ". Kürze heute jede Übung um einen Satz." : ""}</p></div>`;
-  } else {
-    const scale = (k, l, lo, hi) => `<div class="ci"><span>${l}</span><div class="scale s5" data-ci="${k}">${[1, 2, 3, 4, 5].map(v => `<button data-v="${v}" aria-label="${l} ${v} von 5">${v}</button>`).join("")}</div><div class="scale-l"><span>${lo}</span><span>${hi}</span></div></div>`;
-    form = `<div class="card"><div class="card-h"><h3>Wie fühlst du dich?</h3><span class="pill">10 Sek</span></div>
-      ${scale("sleep", "Schlaf", "schlecht", "super")}${scale("energy", "Energie", "leer", "voll")}${scale("sore", "Muskelkater", "keiner", "stark")}
-      <p class="muted" style="font-size:12.5px;margin-top:10px">Ersetzt die Garmin Werte, bis intervals.icu verbunden ist.</p></div>`;
-  }
-
-  const ws = monday(t);
-  const strip = DN.map((dn, i) => {
-    const d = addD(ws, i), ks = sessionsFor(d);
-    const dots = ks.filter(k => sess(k).dur || k === "race").map(k => `<i class="t-${sess(k).type}${isDone(iso(d), k) ? " done" : ""}"></i>`).join("");
-    return `<button class="${iso(d) === iso(t) ? "today" : ""}" data-day="${iso(d)}" aria-label="${DL[i]} ${fmt(d)}"><span class="d">${dn}</span><span class="n">${d.getDate()}</span><span class="dots">${dots}</span></button>`;
-  }).join("");
-  const weekDone = DN.reduce((a, _, i) => { const d = addD(ws, i); return a + sessionsFor(d).filter(k => sess(k).dur && sess(k).type !== "rest" && isDone(iso(d), k)).length; }, 0);
-  const weekPlan = DN.reduce((a, _, i) => a + sessionsFor(addD(ws, i)).filter(k => sess(k).dur && sess(k).type !== "rest").length, 0);
-  const coach = S.coach && S.coach.message ? `<div class="card span coach-card"><div class="coach"><div class="av" aria-hidden="true"></div><div><p class="eyebrow" style="margin-bottom:6px">Coach · ${esc(S.coach.updated ? fmt(new Date(S.coach.updated)) : "")}</p><p>${esc(S.coach.message)}</p></div></div></div>` : "";
+  const coach = S.coach && S.coach.message ? `<div class="card coach-card"><div class="coach"><div class="av" aria-hidden="true"></div><div><p class="eyebrow" style="margin-bottom:6px">Coach · ${esc(S.coach.updated ? fmt(new Date(S.coach.updated)) : "")}</p><p>${esc(S.coach.message)}</p></div></div></div>` : "";
+  const scale = (k, l, lo, hi) => `<div class="ci"><span>${l}</span><div class="scale s5" data-ci="${k}">${[1, 2, 3, 4, 5].map(v => `<button data-v="${v}" aria-label="${l} ${v} von 5">${v}</button>`).join("")}</div><div class="scale-l"><span>${lo}</span><span>${hi}</span></div></div>`;
+  const form = !r && !S.checkins[T] ? `<div class="card"><div class="card-h"><h3>Wie fühlst du dich?</h3><span class="pill">10 Sek</span></div>${scale("sleep", "Schlaf", "schlecht", "super")}${scale("energy", "Energie", "leer", "voll")}${scale("sore", "Muskelkater", "keiner", "stark")}</div>` : "";
   const ks = S.plan.kneeStages[S.settings.kneeStage];
-
+  const planCard = s && s.dur ? `<div class="card plan-today t-${s.type}"><span class="bar"></span><div class="tx"><span class="eyebrow">Plan für heute${p ? " · " + esc(p.name) : ""}</span><b>${esc(s.name)}</b><span class="muted">${esc(s.tag)} · ${s.dur} Min${done ? " · erledigt" : ""}</span></div>
+      ${done ? `<span class="pill good">${ICON.check.replace("<svg", '<svg style="width:14px;height:14px"')}</span>` : s.type === "football" ? `<button class="btn ghost small" data-quicklog="${main}" data-date="${T}">Eintragen</button>` : s.blocks.length && !pend ? `<button class="btn ghost small" data-start="${main}" data-date="${T}">${ICON.play} Start</button>` : ""}
+      <button class="icon-btn" data-sess="${main}" data-date="${T}" aria-label="Details zum Plan">${ICON.right}</button></div>` : "";
   $("#v-heute").innerHTML = `
-    <header class="head"><div><p class="eyebrow">${DL[wd(t)]}, ${fmt(t)} · KW ${kw(t)}${p ? " · " + esc(p.name) : ""}</p><h1 id="h-heute">Heute</h1></div>
-      <button class="icon-btn" data-open="settings" aria-label="Einstellungen"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button></header>
+    <header class="head"><div><p class="eyebrow">${DN[wd(t)]}, ${fmt(t)} · KW ${kw(t)} · Paris in ${left} Tagen</p><h1 id="h-heute">Tagebuch</h1></div>
+      <div class="row" style="flex-wrap:nowrap"><button class="icon-btn" data-open="log" aria-label="Eintrag hinzufügen">${ICON.plus}</button><button class="icon-btn" data-open="settings" aria-label="Einstellungen"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button></div></header>
     ${dialsHtml()}
-    ${zoneStrip()}
     ${pend ? `<div class="banner t-${sess(pend.k).type}"><span class="dot"></span><div class="tx"><b>Training läuft: ${esc(sess(pend.k).name)}</b><span>Übung ${pend.i + 1} von ${sess(pend.k).blocks.reduce((a, b) => a + b.items.length, 0)}</span></div><button class="btn accent small" data-resume>Fortsetzen</button><button class="icon-btn" data-resume="drop" aria-label="Laufendes Training verwerfen">${ICON.close}</button></div>` : ""}
-    ${!S.settings.introDone ? `<div class="card intro"><div class="card-h"><h3>So funktioniert die App</h3></div><ol class="howlist"><li><span><b>Training starten</b> führt dich Übung für Übung durch. Haken setzen, die Pause läuft automatisch.</span></li><li><span><b>Gewichte</b> werden vorgeschlagen. Schaffst du alle Wiederholungen, legt die App automatisch drauf.</span></li><li><span><b>Nach dem Training</b> Anstrengung und Knie bewerten. Daraus passe ich den Plan an.</span></li><li><span>Tippe auf einen <b>Tag in der Woche</b> oder ein <b>Übungsbild</b>, um Details zu sehen.</span></li></ol><button class="btn primary small" data-intro style="margin-top:14px">Verstanden</button></div>` : ""}
-    <div class="grid today">
-      <article class="hero t-${s.type}">
-        ${done ? `<span class="pill good done-badge">${ICON.check.replace("<svg", '<svg style="width:14px;height:14px"')} Erledigt</span>` : ""}
-        <span class="tag">${esc(s.tag)} · Heute</span>
-        <h2>${esc(s.name)}</h2>
-        <p class="goal">${esc(s.goal)}</p>
-        ${extra.length ? `<p class="muted" style="font-size:13px">Dazu: ${esc(extra.join(", "))}</p>` : ""}
-        ${photos.length ? `<div class="thumbs" aria-hidden="true">${photos.map(x => `<span class="thumb-anim anim-mini" data-anim="${x}" data-still></span>`).join("")}${nEx > photos.length ? `<span>+${nEx - photos.length}</span>` : ""}</div>` : ""}
-        <div class="meta">
-          ${s.dur ? `<div><b class="num">${s.dur}</b><span>Minuten</span></div>` : ""}
-          ${nEx ? `<div><b class="num">${nEx}</b><span>Übungen</span></div>` : ""}
-          <div><b>${esc(TYPE[s.type])}</b><span>Typ</span></div>
-        </div>
-        <div class="actions">
-          ${s.type === "football" ? `<button class="btn ${done ? "ghost" : "accent"} grow" data-quicklog="${main}" data-date="${iso(t)}">${done ? "Nochmals eintragen" : main === "spiel" ? "Spiel eintragen" : "Fussball eintragen"}</button>${!pend ? `<button class="btn ghost" data-start="${main}" data-date="${iso(t)}">${ICON.play} Aktivierung</button>` : ""}`
-            : s.blocks.length && s.dur && !pend ? `<button class="btn ${done ? "ghost" : "accent"} grow" data-start="${main}" data-date="${iso(t)}">${ICON.play} ${done ? "Nochmals" : "Training starten"}</button>` : ""}
-          <button class="btn ghost" data-sess="${main}" data-date="${iso(t)}">Details</button>
-        </div>
-        ${nextK ? `<button class="next-up" data-sess="${nextK}" data-date="${iso(nextD)}"><span class="eyebrow">Nächstes Training</span><b>${days(t, nextD) === 1 ? "Morgen" : DL[wd(nextD)]} · ${esc(sess(nextK).name)}</b><span class="muted">${esc(sess(nextK).tag)} · ${sess(nextK).dur} Min</span></button>` : ""}
-      </article>
-      <div class="grid">
-        ${form}
-        <div class="card t-accent paris"><div class="card-h"><h3>Paris</h3><button class="pill accent" data-goto="paris">Zeitrechner</button></div>
-          <div style="display:flex;align-items:flex-end;gap:12px"><span class="big-num num">${left}</span><span class="muted" style="padding-bottom:8px">Tage bis zum Start<br>${fmt(rd)} ${rd.getFullYear()}</span></div>
-          <div class="phase-track">${track}</div>
-          <div class="phase-labels"><span>${p ? esc(p.name) : "Plan"}</span><span>${p ? "bis " + fmt(pd(p.to)) : ""}</span></div>
-        </div>
-      </div>
+    ${!S.settings.introJournal ? `<div class="card intro"><div class="card-h"><h3>Dein Tagebuch</h3></div><ol class="howlist"><li><span>Alles, was du machst, erscheint hier: Garmin, Strava (auch Zwift und Whoop) und deine Einträge. Doppelte werden zusammengeführt.</span></li><li><span><b>Lust auf Training?</b> Wähle Zeit, Ort und Fokus. Ich schlage dir ein passendes Training vor.</span></li><li><span>Tippe auf einen Eintrag für Details. Bewerte ihn mit Anstrengung und Knie, das fliesst in die Vorschläge ein.</span></li><li><span>Mit <b>Notiz</b> schreibst du zu jedem Tag ein paar Sätze.</span></li></ol><button class="btn primary small" data-introj style="margin-top:14px">Verstanden</button></div>` : ""}
+    <div class="jstack">
+      <button class="card wish" data-genopen><div><span class="eyebrow">Lust auf Training?</span><b>Ich schlage dir eins vor</b><span class="muted">Zeit, Ort und Fokus wählen. Tagesform, letzte Tage, Knie und Fussball rechne ich ein.</span></div><span class="wish-go" aria-hidden="true">${ICON.right}</span></button>
       ${coach}
+      ${form}
+      ${planCard}
       ${heuteExtras(main)}
-      <div class="card span"><div class="card-h"><h3>Diese Woche</h3><span class="muted num" style="font-size:13px">${weekDone} / ${weekPlan}${isDeload(t) ? " · Entlastung" : ""}</span></div>
-        <div class="progress" style="margin:-4px 0 14px"><span style="width:${Math.min(100, weekPlan ? weekDone / weekPlan * 100 : 0)}%;background:var(--accent)"></span></div><div class="strip">${strip}</div></div>
-      <div class="card span"><div class="card-h"><h3>Knie Stufe</h3><button class="btn ghost small" data-open="knee">Alle Stufen</button></div>
+      <section aria-label="Tagebuch" class="journal">${journalFeed()}</section>
+      ${zoneStrip()}
+      <div class="card"><div class="card-h"><h3>Knie Stufe</h3><button class="btn ghost small" data-open="knee">Alle Stufen</button></div>
         <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
           <div class="stepper"><button class="icon-btn" data-knee="-1" aria-label="Stufe runter">${ICON.minus}</button><b class="num">${S.settings.kneeStage}</b><button class="icon-btn" data-knee="1" aria-label="Stufe rauf">${ICON.plus}</button></div>
           <div style="min-width:0;flex:1"><b>${esc(ks.name)}</b><p class="muted">${esc(ks.text)}</p></div>
@@ -252,6 +204,8 @@ function renderPlan() {
       ${p ? `<p class="muted" style="margin-bottom:12px">${esc(p.goal)}</p>` : ""}
       ${isDeload(ws) ? `<div class="callout deload t-gym"><b>Entlastungswoche.</b> Gym und Ausdauer mit 40 Prozent weniger Volumen. Fussball normal.</div>` : ""}
       <div class="days">${rows}</div>`;
+  } else if (S.planMode === "vorschlag") {
+    body = genUI();
   } else if (S.planMode === "paris") {
     body = parisCalc();
   } else {
@@ -261,8 +215,8 @@ function renderPlan() {
       return `<article class="phase t-${p.color}${cur && cur.id === p.id ? " now" : ""}"><span class="stripe"></span><div><p class="eyebrow">${cur && cur.id === p.id ? "Jetzt" : (p.to < iso(t) ? "Abgeschlossen" : "Kommt")}</p><h3>${esc(p.name)}</h3><p class="when num">${fmt(pd(p.from))} bis ${fmt(pd(p.to))}</p><p>${esc(p.goal)}</p><div class="wk">${wk}</div></div></article>`;
     }).join("")}</div>`;
   }
-  $("#v-plan").innerHTML = `<header class="head"><div><p class="eyebrow">Mitte Januar Fussball · April Paris</p><h1>Plan</h1></div>
-    <div class="seg" role="group" aria-label="Ansicht"><button data-mode="woche" aria-pressed="${S.planMode === "woche"}">Woche</button><button data-mode="phasen" aria-pressed="${S.planMode === "phasen"}">Phasen</button><button data-mode="paris" aria-pressed="${S.planMode === "paris"}">Paris</button></div></header>${body}`;
+  $("#v-plan").innerHTML = `<header class="head"><div><p class="eyebrow">Nach Wunsch oder nach Plan</p><h1>Training</h1></div>
+    <div class="seg" role="group" aria-label="Ansicht"><button data-mode="vorschlag" aria-pressed="${S.planMode === "vorschlag"}">Vorschlag</button><button data-mode="woche" aria-pressed="${S.planMode === "woche"}">Woche</button><button data-mode="phasen" aria-pressed="${S.planMode === "phasen"}">Phasen</button><button data-mode="paris" aria-pressed="${S.planMode === "paris"}">Paris</button></div></header>${body}`;
 }
 
 /* Hyrox Doubles Zeitrechner: Vorlage 1:15:30, wird auf die Zielzeit skaliert */
@@ -437,22 +391,6 @@ function kneeSheet() {
     <div class="callout"><b>Ampelregel:</b> Bis 2 von 10 beim Laufen ist ok, wenn es am nächsten Morgen weg ist. Ab 3 abbrechen, gehen und nächstes Mal eine Stufe zurück.</div>
     <div class="items">${S.plan.kneeStages.map((k, i) => `<button class="item" data-setknee="${i}"><span class="tx"><b>Stufe ${i} · ${esc(k.name)}</b><span>${esc(k.text)}</span></span>${i === S.settings.kneeStage ? '<span class="pill accent">aktuell</span>' : ""}</button>`).join("")}</div>
     <div><p class="block-t">Lauftipps</p><ol class="howlist"><li>Schrittfrequenz um 5 bis 10 Prozent erhöhen, kürzere Schritte.</li><li>Flach laufen, kein langes Bergab. Laufband mit 1 Prozent Steigung.</li><li>Schuhe prüfen, nach dem Marathon eventuell abgelaufen.</li><li>Hüftkraft ist der Schlüssel: Abduktor, Seitstütz, Step Down.</li></ol></div>`);
-}
-function logSheet(k, date) {
-  const opts = Object.entries(S.plan.sessions).filter(([, s]) => s.dur).map(([id, s]) => `<option value="${id}"${id === k ? " selected" : ""}>${esc(s.name)} (${esc(s.tag)})</option>`).join("");
-  const s = k ? sess(k) : null;
-  openSheet(`<h2 id="sheetTitle">Einheit eintragen</h2>
-    <div class="row"><div class="field" style="flex:1;min-width:140px"><label for="qDate">Datum</label><input class="input" type="date" id="qDate" value="${date || iso(now())}"></div>
-    <div class="field" style="flex:1;min-width:110px"><label for="qDur">Minuten</label><input class="input num" type="number" inputmode="numeric" id="qDur" value="${(() => { const a = k && gActs().find(x => x.date === (date || iso(now())) && sessMatches(k, x)); return a && a.durMin ? a.durMin : s ? s.dur : ""; })()}" min="0" max="400"></div></div>
-    <div class="field"><label for="qSess">Einheit</label><select class="input" id="qSess">${opts}</select></div>
-    ${finishFields()}
-    <button class="btn accent block" id="qSave">Speichern</button>`);
-  bindScales();
-  $("#qSave").addEventListener("click", () => {
-    const rec = { id: uid(), date: $("#qDate").value, session: $("#qSess").value, dur: +$("#qDur").value || null, ...readFinish(), ts: new Date().toISOString() };
-    if (!rec.date) return toast("Bitte ein Datum wählen");
-    S.logs.push(rec); saveLogs(); closeSheet(); renderAll(); toast("Gespeichert");
-  });
 }
 function finishFields() {
   return `<div class="field t-accent"><label>Anstrengung (RPE)</label><div class="scale" data-scale="rpe">${Array.from({ length: 10 }, (_, i) => `<button type="button" data-v="${i + 1}" aria-pressed="false">${i + 1}</button>`).join("")}</div><div class="scale-l"><span>locker</span><span>maximal</span></div></div>
@@ -845,7 +783,7 @@ function reviewSheet(ws) {
 }
 
 /* ---------- Sync über privates GitHub Repository ---------- */
-const SYNC_KEYS = ["logs", "body", "checkins", "bench", "sims", "suppLog"];
+const SYNC_KEYS = ["logs", "body", "checkins", "bench", "sims", "suppLog", "notes", "custom"];
 let syncT = null, syncBusy = false;
 function scheduleSync() { if (!S.settings.ghToken || !S.settings.ghRepo) return; clearTimeout(syncT); syncT = setTimeout(() => ghSync().catch(() => {}), 2500); }
 const b64e = s => btoa(unescape(encodeURIComponent(s))), b64d = s => decodeURIComponent(escape(atob(s.replace(/\n/g, ""))));
@@ -856,7 +794,9 @@ function mergeData(r) {
   S.logs = byId(r.logs, S.logs); S.bench = byId(r.bench, S.bench); S.sims = byId(r.sims, S.sims);
   S.body = byDate(S.body, r.body); S.checkins = { ...(r.checkins || {}), ...S.checkins };
   const sl = { ...(r.suppLog || {}) }; Object.entries(S.suppLog).forEach(([d, ids]) => sl[d] = [...new Set([...(sl[d] || []), ...ids])]); S.suppLog = sl;
+  S.notes = { ...(r.notes || {}), ...S.notes }; S.custom = { ...(r.custom || {}), ...S.custom };
   if (r.settings && r.settings.supps && !(S.settings.supps || []).length) S.settings.supps = r.settings.supps;
+  registerSessions();
 }
 async function ghSync(manual) {
   const { ghToken, ghRepo } = S.settings; if (!ghToken || !ghRepo || syncBusy) return;
@@ -868,7 +808,7 @@ async function ghSync(manual) {
     if (r.ok) { const j = await r.json(); sha = j.sha; remote = JSON.parse(b64d(j.content)); } else if (r.status !== 404) throw new Error("Lesen fehlgeschlagen (" + r.status + ")");
     mergeData(remote);
     SYNC_KEYS.forEach(k => store.set(k, S[k])); store.set("deleted", S.deleted); saveSettings();
-    const out = { updated: new Date().toISOString(), deleted: S.deleted, settings: { supps: S.settings.supps || [], kneeStage: S.settings.kneeStage }, logs: S.logs, body: S.body, checkins: S.checkins, bench: S.bench, sims: S.sims, suppLog: S.suppLog };
+    const out = { updated: new Date().toISOString(), deleted: S.deleted, settings: { supps: S.settings.supps || [], kneeStage: S.settings.kneeStage }, logs: S.logs, body: S.body, checkins: S.checkins, bench: S.bench, sims: S.sims, suppLog: S.suppLog, notes: S.notes, custom: S.custom };
     const w = await fetch(url, { method: "PUT", headers: { ...h, "Content-Type": "application/json" }, body: JSON.stringify({ message: "Logbuch " + iso(now()), content: b64e(JSON.stringify(out, null, 1)), sha }) });
     if (!w.ok) throw new Error("Schreiben fehlgeschlagen (" + w.status + ")");
     S.settings.lastSync = new Date().toISOString(); S.settings.syncErr = ""; saveSettings();
@@ -882,6 +822,7 @@ function settingsExtras() {
     <button class="btn primary block" data-ics style="margin-top:10px">Kalender exportieren</button><p class="muted" style="font-size:12.5px;margin-top:6px">Alle Trainings bis Paris, mit Erinnerung vorher, dazu deine Supplements täglich. Auf dem iPhone die Datei öffnen und «Alle hinzufügen» wählen. Ändert sich der Plan, nochmals exportieren.</p></div>
     <div><p class="block-t">Dehnen</p><div class="row" style="align-items:center"><label class="muted" for="stTime" style="font-size:13px">Erinnerung um</label><input class="input" type="time" id="stTime" value="${st.stretchTime || "21:00"}" style="flex:1"><button class="btn ghost small" data-stretchtoggle>${st.stretchOn === false ? "Einschalten" : "Ausschalten"}</button></div><p class="muted" style="font-size:12.5px;margin-top:6px">Die Erinnerung kommt über den Kalender. Nach Änderung den Kalender nochmals exportieren.</p></div>
     <div><p class="block-t">Supplements</p><button class="btn ghost block" data-open="supps">${supps().length ? supps().length + " eingetragen · Bearbeiten" : "Einrichten"}</button></div>
+    ${stravaSettings()}
     <div><p class="block-t">Sync über GitHub</p>
       <div class="field"><label for="ghRepo">Privates Repository</label><input class="input" id="ghRepo" value="${esc(st.ghRepo || "jamiro-sys/training-data")}" autocomplete="off"></div>
       <div class="field" style="margin-top:8px"><label for="ghToken">Zugangsschlüssel (Fine grained token)</label><input class="input" id="ghToken" type="password" value="${esc(st.ghToken || "")}" autocomplete="off" placeholder="github_pat_..."></div>
@@ -1003,13 +944,14 @@ function countUp(root = document) {
 
 /* ---------- Events ---------- */
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-goto],[data-checkin],[data-resume],[data-intro],[data-jump],[data-start],[data-sess],[data-ex],[data-day],[data-week],[data-mode],[data-cat],[data-open],[data-knee],[data-setknee],[data-quicklog],[data-del],[data-theme-set],[data-done]");
+  const t = e.target.closest("[data-goto],[data-checkin],[data-resume],[data-intro],[data-introj],[data-jump],[data-start],[data-sess],[data-ex],[data-day],[data-week],[data-mode],[data-cat],[data-open],[data-knee],[data-setknee],[data-quicklog],[data-del],[data-theme-set],[data-done]");
   if (!t) return;
   const d = t.dataset;
   if (d.resume !== undefined) { const r = pendingPlayer(); if (d.resume === "drop") { clearPlayer(); renderHeute(); return toast("Training verworfen"); } return r && startPlayer(r.k, r.date, r); }
   if (d.goto === "paris") { S.planMode = "paris"; location.hash = "plan"; return renderPlan(); }
   if (d.checkin === "edit") { delete S.checkins[iso(now())]; store.set("checkins", S.checkins); return renderHeute(); }
   if (d.intro !== undefined) { S.settings.introDone = true; saveSettings(); return renderHeute(); }
+  if (d.introj !== undefined) { S.settings.introJournal = true; saveSettings(); return renderHeute(); }
   if (d.start) return startPlayer(d.start, d.date);
   if (d.quicklog) return logSheet(d.quicklog, d.date);
   if (d.sess) return sessionSheet(d.sess, d.date);
@@ -1170,6 +1112,432 @@ document.addEventListener("change", async e => {
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && SIM.on && $("#sheet").hidden) { e.stopImmediatePropagation(); $("#simStop").click(); } }, true);
 
+/* ================= Tagebuch, freie Einträge, Vorschlag, Strava ================= */
+/* Freie Einträge: alles, was nicht aus dem Plan kommt (Zwift, Gym mit Whoop, Padel ...) */
+const FREE = {
+  x_gym: ["Gym", "gym", ["gym", "hyrox"]], x_fb: ["Fussball", "football", ["football"]], x_run: ["Laufen", "endurance", ["run"]],
+  x_bike: ["Velo, Rolle, Zwift", "endurance", ["bike"]], x_row: ["Rudern, SkiErg", "endurance", ["row"]], x_hyrox: ["Hyrox", "hyrox", ["hyrox", "gym", "row", "run"]],
+  x_mob: ["Mobility, Dehnen", "rest", []], x_other: ["Andere Sportart", "endurance", ["other", "hike", "bike", "run", "row", "gym", "hyrox"]]
+};
+const FREE_OF = g => ({ football: "x_fb", run: "x_run", bike: "x_bike", row: "x_row", gym: "x_gym", hyrox: "x_hyrox" }[g] || "x_other");
+function registerSessions() {
+  if (!S.plan) return;
+  Object.entries(FREE).forEach(([k, [name, type]]) => { S.plan.sessions[k] = { name, tag: "Eigener Eintrag", type, dur: 0, blocks: [], goal: "", free: true }; });
+  Object.entries(S.custom || {}).forEach(([k, s]) => { if (s && s.blocks) S.plan.sessions[k] = s; });
+}
+function pruneCustom() {
+  const used = new Set(S.logs.map(l => l.session)), lim = iso(addD(now(), -3));
+  Object.keys(S.custom).forEach(k => { if (!used.has(k) && (S.custom[k].created || "") < lim) delete S.custom[k]; });
+  store.set("custom", S.custom);
+}
+const LIGHT = ["dehnen", "mob", "knie", "x_mob"];
+const srcOf = a => {
+  if (!a) return "App";
+  const d = (a.device || "") + " " + (a.name || "");
+  if (a.src === "strava") return /whoop/i.test(d) ? "Whoop" : /zwift/i.test(d) ? "Zwift" : "Strava";
+  return "Garmin";
+};
+const zoneOf = hr => { const z = S.profile && S.profile.zones; if (!z || !hr) return null; const i = z.findIndex(x => hr >= x.lo && hr <= x.hi); return i >= 0 ? i + 1 : hr > z[4].hi ? 5 : null; };
+const hrMeta = a => a && a.avgHr ? `Ø ${a.avgHr}${zoneOf(a.avgHr) ? " · Z" + zoneOf(a.avgHr) : ""}` : "";
+function dayMetrics(date) {
+  const g = gDay(date) || (S.history && S.history.days && S.history.days[date]) || null;
+  return g && (g.hrv != null || g.sleepH != null || g.restingHr != null) ? g : null;
+}
+
+/* ---------- Tagebuch ---------- */
+function entryLine(e) {
+  const a = e.act, l = e.log;
+  return [e.dur ? e.dur + " Min" : "", a && a.km ? String(Math.round(a.km * 10) / 10).replace(".", ",") + " km" : "", hrMeta(a), l && l.rpe ? "RPE " + l.rpe : "", l && l.knee != null ? "Knie " + l.knee : ""].filter(Boolean).join(" · ");
+}
+function journalDay(date) {
+  const d = pd(date), T = iso(now()), es = dayEntries(date), light = S.logs.filter(l => l.date === date && LIGHT.includes(l.session));
+  const m = dayMetrics(date), note = S.notes[date], c = S.checkins[date], isT = date === T;
+  if (!es.length && !light.length && !note && !isT && !m && !c) return "";
+  const met = [m && m.hrv != null ? `<span>HRV <b class="num">${m.hrv}</b></span>` : "", m && m.restingHr != null ? `<span>Ruhepuls <b class="num">${m.restingHr}</b></span>` : "", m && m.sleepH != null ? `<span>Schlaf <b class="num">${hm(m.sleepH)}</b></span>` : "", c ? `<span>Gefühl <b class="num">${c.energy}/5</b></span>` : ""].join("");
+  const rows = es.map((e, i) => `<button class="srow jentry t-${e.group}" data-entry="${date}|${i}"><span class="bar"></span><span class="tx"><b>${esc(e.name)}</b><span>${esc(entryLine(e))}</span></span><span class="src">${srcOf(e.act)}${e.log && e.act ? " + App" : ""}</span></button>`).join("");
+  const lt = light.length ? `<div class="jlight">${light.map(l => `<span class="pill">${esc(l.title || (sess(l.session) || {}).name || "Mobility")}${l.dur ? " · " + l.dur + " Min" : ""}</span>`).join("")}</div>` : "";
+  const sup = (S.suppLog[date] || []).length;
+  return `<article class="jday${isT ? " today" : ""}"><div class="jd"><b class="num">${d.getDate()}</b><span>${isT ? "Heute" : DN[wd(d)]}</span></div><div class="jbody">
+    ${met ? `<div class="jmet">${met}</div>` : ""}
+    ${rows || (isT ? "" : `<p class="jrest">Ruhetag</p>`)}${lt}
+    ${note ? `<button class="jnote" data-note="${date}">${esc(note)}</button>` : ""}
+    <div class="jfoot">${note ? "" : `<button class="jadd" data-note="${date}">${ICON.plus.replace("<svg", '<svg style="width:13px;height:13px"')} Notiz</button>`}<button class="jadd" data-addentry="${date}">${ICON.plus.replace("<svg", '<svg style="width:13px;height:13px"')} Eintrag</button>${sup ? `<span class="jadd muted">${sup} Supplements</span>` : ""}</div>
+  </div></article>`;
+}
+function journalFeed() {
+  const t = now(); let out = "", wk = null;
+  for (let i = 0; i < S.feedDays; i++) {
+    const d = addD(t, -i), html = journalDay(iso(d)); if (!html) continue;
+    const w = iso(monday(d));
+    if (w !== wk) {
+      wk = w; const a = pd(w), b = addD(a, 6) > t ? t : addD(a, 6), es = entriesRange(a, b), min = es.reduce((x, e) => x + (e.dur || 0), 0);
+      out += `<div class="jweek"><b>KW ${kw(d)}</b><span>${es.length} ${es.length === 1 ? "Einheit" : "Einheiten"} · ${hm(min / 60)} Std</span></div>`;
+    }
+    out += html;
+  }
+  return out + `<button class="btn ghost block" data-more style="margin-top:6px">Ältere Tage</button>`;
+}
+function entrySheet(date, i) {
+  const e = dayEntries(date)[i]; if (!e) return;
+  const a = e.act, l = e.log, s = l && sess(l.session), d = pd(date);
+  const st = [[e.dur, "Minuten"], [a && a.km ? String(Math.round(a.km * 10) / 10).replace(".", ",") : null, "km"], [a && a.avgHr, "Ø Puls" + (zoneOf(a && a.avgHr) ? " · Zone " + zoneOf(a.avgHr) : "")], [a && a.maxHr, "Max Puls"], [a && a.watts ? Math.round(a.watts) : null, "Watt Ø"], [a && a.elev ? Math.round(a.elev) : null, "Höhenmeter"], [a && (a.load || a.effort), a && a.load ? "Load" : "Relative Effort"], [l && l.rpe, "RPE"], [l && l.knee, "Knie"]].filter(x => x[0] != null && x[0] !== "");
+  const sets = l && l.sets ? Object.entries(l.sets).map(([ex, v]) => `<div class="item static"><span class="tx"><b>${esc((S.plan.exercises[ex] || {}).name || ex)}</b></span><span class="dose">${v.map(x => (x.w || "-") + "×" + (x.r || "-")).join("  ")}</span></div>`).join("") : "";
+  const stravaId = a && a.src === "strava" && String(a.id || "").replace(/^s/, "");
+  openSheet(`<div><p class="eyebrow">${DL[wd(d)]}, ${fmt(d)} · ${srcOf(a)}${l && a ? " und App" : ""}${a && a.device && a.device !== srcOf(a) && !/whoop/i.test(a.device) ? " · " + esc(a.device) : ""}</p><h2 id="sheetTitle" style="margin-top:8px">${esc(e.name)}</h2>${a && l && (l.title || (s && s.name)) !== a.name ? `<p class="muted">${esc(a.name)}</p>` : ""}</div>
+    ${st.length ? `<div class="stats" style="margin:0">${st.slice(0, 9).map(x => `<div class="stat"><b class="num">${esc(x[0])}</b><span>${esc(x[1])}</span></div>`).join("")}</div>` : ""}
+    ${l && l.note ? `<div class="callout"><b>Notiz:</b> ${esc(l.note)}</div>` : ""}
+    ${sets ? `<div><p class="block-t">Sätze</p><div class="items">${sets}</div></div>` : ""}
+    <div class="stack">
+      ${a && !l ? `<button class="btn accent block" data-rate="${esc(a.id)}" data-date="${date}">Bewerten: Anstrengung, Knie, Notiz</button>` : ""}
+      ${l && s && s.blocks && s.blocks.length ? `<button class="btn primary block" data-start="${esc(l.session)}" data-date="${iso(now())}">${ICON.play} Nochmals machen</button>` : ""}
+      ${stravaId ? `<a class="btn ghost block" href="https://www.strava.com/activities/${encodeURIComponent(stravaId)}" target="_blank" rel="noopener">In Strava öffnen</a>` : ""}
+      ${l ? `<button class="btn ghost block" data-del="${esc(l.id)}">App Eintrag löschen</button>` : ""}
+    </div>`);
+}
+function noteSheet(date) {
+  const d = pd(date);
+  openSheet(`<div><p class="eyebrow">${DL[wd(d)]}, ${fmt(d)}</p><h2 id="sheetTitle" style="margin-top:8px">Tagebuch</h2></div>
+    <div class="field"><label for="nTxt">Wie war der Tag? Gefühl, Schlaf, Stress, Essen, Knie</label><textarea class="input" id="nTxt" maxlength="1500" rows="6">${esc(S.notes[date] || "")}</textarea></div>
+    <button class="btn accent block" id="nSave">Speichern</button>`);
+  setTimeout(() => { const n = $("#nTxt"); if (n) n.focus(); }, 60);
+  $("#nSave").addEventListener("click", () => { const v = $("#nTxt").value.trim(); if (v) S.notes[date] = v; else delete S.notes[date]; saveKey("notes", S.notes); closeSheet(); renderHeute(); toast("Gespeichert"); });
+}
+function logSheet(k, date, actId) {
+  date = date || iso(now());
+  const a = actId ? gActs().find(x => x.id === actId) : null;
+  if (!k && a) k = FREE_OF(GTYPE(a.type));
+  if (!k) k = "x_gym";
+  const s = sess(k);
+  const og = (label, ids) => ids.length ? `<optgroup label="${label}">${ids.map(id => `<option value="${id}"${id === k ? " selected" : ""}>${esc(sess(id).name)}${sess(id).free ? "" : " · " + esc(sess(id).tag)}</option>`).join("")}</optgroup>` : "";
+  const planIds = Object.entries(S.plan.sessions).filter(([, x]) => x.dur && !x.free && !x.gen).map(([id]) => id);
+  const genIds = Object.entries(S.custom).sort((x, y) => (y[1].created || "").localeCompare(x[1].created || "")).slice(0, 4).map(([id]) => id);
+  openSheet(`<h2 id="sheetTitle">${a ? "Aktivität bewerten" : "Eintrag"}</h2>
+    ${a ? `<p class="muted">${esc(a.name || a.type)} · ${srcOf(a)}${a.durMin ? " · " + a.durMin + " Min" : ""}</p>` : ""}
+    <div class="row"><div class="field" style="flex:1;min-width:140px"><label for="qDate">Datum</label><input class="input" type="date" id="qDate" value="${date}"></div>
+    <div class="field" style="flex:1;min-width:110px"><label for="qDur">Minuten</label><input class="input num" type="number" inputmode="numeric" id="qDur" value="${a && a.durMin ? a.durMin : s && s.dur ? s.dur : ""}" min="0" max="600"></div></div>
+    <div class="field"><label for="qSess">Was</label><select class="input" id="qSess">${og("Eigene Aktivität", Object.keys(FREE))}${og("Vorschläge", genIds)}${og("Aus dem Plan", planIds)}</select></div>
+    <div class="field"><label for="qTitle">Titel (optional)</label><input class="input" id="qTitle" maxlength="80" value="${esc(a ? a.name || "" : "")}" placeholder="z.B. Zwift Gruppenfahrt, Padel, Gym mit Whoop"></div>
+    ${finishFields()}
+    <button class="btn accent block" id="qSave">Speichern</button>`);
+  bindScales();
+  $("#qSave").addEventListener("click", () => {
+    const rec = { id: uid(), date: $("#qDate").value, session: $("#qSess").value, title: $("#qTitle").value.trim() || undefined, dur: +$("#qDur").value || null, ...readFinish(), actId: a ? a.id : undefined, ts: new Date().toISOString() };
+    if (!rec.date) return toast("Bitte ein Datum wählen");
+    S.logs.push(rec); saveLogs(); closeSheet(); renderAll(); toast("Im Tagebuch");
+  });
+}
+
+/* ---------- Trainingsvorschlag nach Wunsch ---------- */
+const GEN_DEF = { dur: 60, ort: "gym", fokus: "auto", int: "auto", cardio: "auto", fav: true };
+const COMPOUND = new Set(["squatmachine", "legpress", "hipthrust", "latpull", "inclinedb", "cablerow", "benchmachine", "rdl", "pullup", "backsquat", "seatedrow", "dbpress", "kbgoblet"]);
+const FIXREPS = { calfmachine: "15", kbaround: "5 Runden je Richtung", pallof: "12 je Seite", cablecrunch: "15", cablecurl1: "12 je Arm", facepull: "15", lateralmachine: "12 bis 15", sideplank: "30 s je Seite", singlebridge: "10 je Seite", stepdown: "8 je Seite, 3 s runter", copenhagen: "20 s je Seite", kbswing: "15", bbj: "8", nordic: "4 bis 6", clamshell: "15 je Seite" };
+const POOL = {
+  beine: [["squatmachine", "legpress"], ["hipthrust"], ["legcurl"], ["legext"], ["calfmachine"], ["legpress", "rdl"], ["nordic"], ["kbgoblet"]],
+  oben: [["latpull", "pullup"], ["inclinedb", "benchmachine"], ["cablerow", "seatedrow"], ["cablechest", "inclinefly"], ["lateralmachine"], ["facepull", "reversefly"], ["szcurl", "cablecurl1"], ["pushdown"], ["dbpress"]],
+  ganz: [["squatmachine", "legpress"], ["latpull"], ["hipthrust"], ["inclinedb", "cablechest"], ["cablerow"], ["legcurl"], ["lateralmachine", "facepull"], ["kbaround", "pallof"]],
+  home: [["kbgoblet"], ["kbswing"], ["singlebridge"], ["kbaround"], ["stepdown"], ["bbj"], ["sideplank"], ["copenhagen"]],
+  out: [["bbj"], ["stepdown"], ["singlebridge"], ["sideplank"], ["copenhagen"], ["clamshell"]]
+};
+const DOSE = { hart: { c: [4, "6 bis 8", 120], i: [3, "10 bis 12", 60], cue: "RPE 8 bis 9" }, mittel: { c: [3, "8 bis 10", 90], i: [3, "10 bis 12", 60], cue: "RPE 7 bis 8" }, locker: { c: [2, "12 bis 15", 60], i: [2, "12 bis 15", 45], cue: "RPE 6, sauber" } };
+const IT = (ex, sets, reps, rest, cue) => { const o = { ex, sets, reps }; if (rest != null) o.rest = rest; if (cue) o.cue = cue; return o; };
+const CARDIO_EX = { bike: ["gymbike", "bike", "bike"], run: ["treadmill", "treadmill", "treadmill"], row: ["row", "row", "row"], ski: ["skierg", "skierg", "skierg"] };
+const CARDIO_N = { bike: "Velo", run: "Laufen", row: "Rudern", ski: "SkiErg" };
+function personalizeItem(it) {
+  const pr = S.profile; if (!pr || !it.reps) return it;
+  const bike = it.ex === "bike" || it.ex === "gymbike", map = (bike && pr.bikeHf) || pr.zoneHf;
+  it.reps = it.reps.replace(/Zone (\d)\b(?! \()/g, (m, z) => map && map[z] ? `${m} (Puls ${map[z]})` : m);
+  Object.entries(pr.paceMap || {}).forEach(([k, v]) => { if (!it.reps.includes(k + " " + v)) it.reps = it.reps.replace(k, `${k} ${v}`); });
+  return it;
+}
+function genContext() {
+  const t = now(), T = iso(t), day = i => dayEntries(iso(addD(t, -i)));
+  const exOf = e => { const s = e.log && sess(e.log.session); return s && s.blocks ? s.blocks.flatMap(b => b.items).filter(x => x.ex && S.plan.exercises[x.ex]) : []; };
+  const frac = (e, cat) => { const ex = exOf(e); return ex.length ? ex.filter(x => S.plan.exercises[x.ex].cat === cat).length / ex.length : null; };
+  const legOf = e => { const g = e.act ? GTYPE(e.act.type) : null, f = frac(e, "Beine"); if (e.group === "football" || g === "run") return e.dur; if (g === "bike") return e.dur * .6; if (f != null) return e.dur * f; return e.group === "hyrox" ? e.dur * .5 : e.group === "gym" ? e.dur * .4 : e.dur * .3; };
+  const upOf = e => { const g = e.act ? GTYPE(e.act.type) : null, f = frac(e, "Oberkörper"); if (f != null) return e.dur * f; return e.group === "gym" ? e.dur * .4 : g === "row" ? e.dur * .4 : 0; };
+  const since = f => { for (let i = 1; i < 21; i++) if (day(i).some(f)) return i; return 21; };
+  const tm = sessionsFor(addD(t, 1)).map(sess).filter(Boolean);
+  return {
+    rec: recoveryFor(T) ?? recoveryFor(iso(addD(t, -1))), L: loadStats(),
+    legs: [0, 1, 2].map(i => day(i).reduce((x, e) => x + legOf(e), 0)),
+    sinceLeg: since(e => (e.group === "gym" || e.group === "hyrox") && legOf(e) >= e.dur * .45),
+    sinceUp: since(e => upOf(e) >= e.dur * .35),
+    sinceEnd: since(e => e.group === "endurance"),
+    ranY: day(1).some(e => e.act && GTYPE(e.act.type) === "run"),
+    fbTomorrow: tm.some(s => s.type === "football"), today: day(0), yest: day(1),
+    knee: S.settings.kneeStage, weeks: Math.max(0, Math.round(days(t, pd(raceDate())) / 7))
+  };
+}
+function pickSlots(pool, n, fav, seed, used) {
+  const slots = pool.slice(0, 2).concat(pool.slice(2).map((x, i, a) => a[(i + seed) % a.length]));
+  const out = [];
+  for (const alts of slots) {
+    if (out.length >= n) break;
+    const ok = alts.filter(x => S.plan.exercises[x] && !used.has(x)); if (!ok.length) continue;
+    const favs = ok.filter(x => S.plan.exercises[x].fav);
+    const list = fav && favs.length ? favs : ok;
+    const ex = list[(seed + (fav ? 0 : 1)) % list.length];
+    used.add(ex); out.push(ex);
+  }
+  return out;
+}
+function generate() {
+  const G = S.gen, C = genContext(), why = [], seed = S.genSeed || 0;
+  let it = G.int, f = G.fokus, ort = G.ort;
+  // Intensität nach Tagesform und Belastung
+  if (it === "auto") {
+    it = C.rec == null ? "mittel" : C.rec >= 67 ? "hart" : C.rec >= 34 ? "mittel" : "locker";
+    why.push(C.rec != null ? `Erholung ${C.rec} %: ${it === "hart" ? "du kannst Gas geben" : it === "mittel" ? "normal trainieren" : "heute sanft"}.` : "Noch keine Erholungswerte, darum mittlere Intensität.");
+    if (C.L.st.lvl >= 3 && it !== "locker") { it = "locker"; why.push("Die letzten 7 Tage waren deutlich mehr als gewohnt: heute locker."); }
+    else if (C.L.st.lvl >= 2 && it === "hart") { it = "mittel"; why.push("Hohe Belastung diese Woche: mittlere Intensität."); }
+    if (C.today.length && it === "hart") { it = "mittel"; why.push(`Heute schon ${C.today.map(e => e.name).join(", ")}: zweite Einheit nicht voll.`); }
+  } else if (it === "hart" && C.rec != null && C.rec < 34) why.push(`Erholung nur ${C.rec} %. Hart geht, aber brich ab, wenn es sich zäh anfühlt.`);
+  const legsHeavy = C.legs[1] >= 50 || C.legs[0] >= 50;
+  if (legsHeavy) why.push(`${C.legs[0] >= 50 ? "Heute" : "Gestern"} ${(C.legs[0] >= 50 ? C.today : C.yest).map(e => e.name).join(", ")}: viel Beinarbeit.`);
+  if (C.fbTomorrow) why.push("Morgen Fussball: Beine heute nicht hart belasten.");
+  // Fokus wählen, wenn du mich entscheiden lässt
+  if (f === "auto") {
+    const sc = {};
+    if (ort === "gym") {
+      sc.beine = C.sinceLeg - (legsHeavy ? 6 : 0) - (C.fbTomorrow ? 3 : 0);
+      sc.oben = C.sinceUp + (legsHeavy ? 2 : 0);
+      sc.hyrox = (C.weeks <= 14 ? 3 : 0.5) + (it === "hart" ? 1 : 0) - (legsHeavy ? 2 : 0);
+      sc.ganz = G.dur <= 40 ? 3.5 : 1;
+      sc.z2 = it === "locker" ? 4 : 0.5;
+    } else if (ort === "home") {
+      sc.z2 = (it === "locker" ? 4 : 2) + (legsHeavy ? 2 : 0) + Math.min(3, C.sinceEnd) * .5;
+      sc.int = it === "hart" && !legsHeavy && !C.fbTomorrow ? 4.5 : it === "mittel" ? 1.5 : 0;
+      sc.ganz = 2 + (C.sinceLeg >= 3 && !legsHeavy ? 1.5 : 0);
+    } else {
+      sc.z2 = 3 + (it === "locker" ? 1 : 0); sc.int = it === "hart" && !legsHeavy ? 3.5 : 0.5;
+    }
+    if (C.rec != null && C.rec < 34) { sc.mob = 5; sc.z2 = (sc.z2 || 0) + 1; }
+    if (G.dur <= 20) sc.mob = (sc.mob || 0) + 2;
+    const ranked = Object.entries(sc).sort((a, b) => b[1] - a[1]).map(x => x[0]);
+    f = ranked[seed % Math.min(2, ranked.length)];
+    const FN = { beine: "Beine", oben: "Oberkörper", ganz: "Ganzkörper", hyrox: "Hyrox Stationen", z2: "lockere Ausdauer", int: "Intervalle", mob: "Mobility" };
+    if (f === "beine") why.push(`Beine im Gym zuletzt vor ${C.sinceLeg >= 21 ? "über 3 Wochen" : C.sinceLeg + " Tagen"}.`);
+    else if (f === "oben") why.push(`Oberkörper zuletzt vor ${C.sinceUp >= 21 ? "über 3 Wochen" : C.sinceUp + " Tagen"}${legsHeavy || C.fbTomorrow ? ", und die Beine bekommen Pause" : ""}.`);
+    else if (f === "hyrox") why.push(`Paris in ${C.weeks} Wochen: Stationen üben.`);
+    else if (f === "z2") why.push(`Lockere Ausdauer: ${legsHeavy ? "das erholt die Beine" : C.sinceEnd >= 3 ? "letzte Ausdauer vor " + (C.sinceEnd >= 21 ? "über 3 Wochen" : C.sinceEnd + " Tagen") : "passt zur Tagesform"}.`);
+    else if (f === "int") why.push("Gute Tagesform und frische Beine: Zeit für Intervalle.");
+    else if (f === "ganz") why.push(ort === "gym" ? "Wenig Zeit: Ganzkörper deckt alles ab." : `Kraft für Beine und Rumpf ohne Gym${C.sinceLeg < 21 ? ", Beine zuletzt vor " + C.sinceLeg + " Tagen" : ""}.`);
+    else why.push(C.rec != null && C.rec < 34 ? "Erholung niedrig: heute Mobility statt Belastung." : `Darum heute ${FN[f]}.`);
+  } else if (f === "beine" && (legsHeavy || C.fbTomorrow) && it === "hart") { it = "mittel"; why.push("Beine trotzdem, aber mittlere Intensität."); }
+  // Ausdauergerät
+  let cd = G.cardio;
+  if (cd === "auto") cd = ort === "out" ? (C.knee >= 1 && !C.ranY ? "run" : "bike") : ort === "home" ? (f === "int" ? "bike" : C.knee >= 2 && !C.ranY && seed % 2 ? "run" : "bike") : f === "int" ? ["row", "ski", "bike"][seed % 3] : "bike";
+  if (cd === "ski" && ort !== "gym") cd = "row";
+  if (cd === "row" && ort === "out") cd = "bike";
+  if (cd === "run" && C.knee === 0) { cd = "bike"; why.push("Knie Stufe 0: kein Laufen, darum Velo."); }
+  if (cd === "run" && f === "int" && C.knee < 6) { cd = ort === "out" ? "bike" : ort === "gym" ? "row" : "bike"; why.push(`Knie Stufe ${C.knee}: Laufintervalle erst ab Stufe 6, darum ${CARDIO_N[cd]}.`); }
+  const cex = CARDIO_EX[cd][ort === "gym" ? 0 : ort === "home" ? 1 : 2];
+  const dose = DOSE[it], blocks = [], dur = G.dur;
+  let budget = dur, name, type, goal;
+  const knee = dur >= 45 && f !== "mob";
+  if (knee) { blocks.push({ title: "Knie Routine · 6 Min", items: [IT("clamshell", 2, "15 je Seite", 15), IT("lateralwalk", 2, "15 Schritte je Richtung", 15), IT("sideplank", 1, "30 s je Seite")] }); budget -= 6; }
+  const strengthBlock = (pool, title) => {
+    const warm = ort === "gym" ? 6 : 4; budget -= warm;
+    blocks.unshift({ title: "Aufwärmen", items: [ort === "gym" ? IT("gymbike", 1, `${warm} Min locker, Zone 1`) : IT("bike", 1, `${warm} Min locker, Zone 1`)] });
+    const used = new Set(knee ? ["clamshell", "lateralwalk", "sideplank"] : []), cand = pickSlots(pool, 12, G.fav, seed, used), items = [];
+    for (const ex of cand) {
+      const comp = COMPOUND.has(ex), [sets, reps, rest] = comp ? dose.c : dose.i, min = sets * (40 + rest) / 60 + 1;
+      if (budget - min < (dur >= 60 ? 4 : 0) && items.length >= 2) break;
+      items.push(IT(ex, sets, FIXREPS[ex] || reps, rest, comp && items.length < 2 ? dose.cue : null)); budget -= min;
+    }
+    blocks.push({ title, items });
+    if (budget >= 4 && ort === "gym") { const core = ["kbaround", "pallof", "cablecrunch"].filter(x => !used.has(x))[seed % 3] || "kbaround"; blocks.push({ title: "Rumpf", items: [IT(core, 2, FIXREPS[core], 30)] }); budget -= 4; }
+    if (budget >= 8 && it !== "hart") blocks.push({ title: "Ausklang", items: [IT(cex, 1, `${Math.round(budget)} Min Zone 2`)] });
+  };
+  if (f === "beine" || f === "oben" || f === "ganz") {
+    const pool = ort === "gym" ? POOL[f] : ort === "home" ? POOL.home : POOL.out;
+    if (ort !== "gym" && f !== "ganz") why.push(`${ort === "home" ? "Zuhause" : "Draussen"} ohne Maschinen: Ganzkörper mit ${ort === "home" ? "Kettlebell" : "Körpergewicht"}.`);
+    strengthBlock(pool, ort === "gym" ? "Kraft · " + dose.cue : "Zirkel · " + dose.cue);
+    name = ort === "gym" ? { beine: "Beine", oben: "Oberkörper", ganz: "Ganzkörper" }[f] : ort === "home" ? "Kettlebell Ganzkörper" : "Körpergewicht draussen";
+    type = "gym"; goal = "Kraft nach deinem Wunsch, mit deinen Lieblingsübungen und den Gewichten aus dem Logbuch.";
+  } else if (f === "hyrox") {
+    const ST = ort === "gym" ? [["skierg", "500 m"], ["wallball", "20"], ["row", "500 m"], ["farmers", "100 m"], ["sblunge", "20 Schritte"], ["bbj", "10"], ["kbswing", "20"]] : [["row", "500 m"], ["kbswing", "20"], ["bbj", "10"], ["kbgoblet", "15"], ["sideplank", "30 s je Seite"]];
+    const k = it === "locker" ? 0.5 : it === "mittel" ? 0.75 : 1, sc = v => v.replace(/^(\d+)/, n => { const st = n >= 100 ? 50 : 5; return String(Math.max(st, Math.round(n * k / st) * st)); });
+    const st = ST.map((x, i, a) => a[(i + seed * 2) % a.length]).slice(0, 4);
+    const runOk = C.knee >= 4 && ort !== "out";
+    const warm = 8; budget -= warm + 4;
+    const rounds = Math.max(1, Math.min(6, Math.floor(budget / (runOk ? 12 : 10))));
+    blocks.unshift({ title: "Aufwärmen", items: [IT(ort === "gym" ? "gymbike" : "bike", 1, `${warm} Min steigernd bis Zone 3`)] });
+    const items = [runOk ? IT("treadmill", rounds, it === "hart" ? "800 m Hyrox Tempo" : "600 m locker zügig", 0) : IT(ort === "gym" ? "gymbike" : "bike", rounds, "3 Min Zone 3", 0)];
+    st.forEach(([ex, reps], i) => items.push(IT(ex, rounds, sc(reps), i === st.length - 1 ? (it === "hart" ? 60 : 90) : 0)));
+    if (!runOk) why.push(`Knie Stufe ${C.knee}: Laufstrecken als Velo Abschnitte.`);
+    blocks.push({ title: `Stationen · ${rounds} Runden`, items });
+    blocks.push({ title: "Ausklang", items: [IT(ort === "gym" ? "gymbike" : "bike", 1, "4 Min ausrollen")] });
+    name = "Hyrox Stationen"; type = "hyrox"; goal = "Wechsel zwischen Ausdauer und Stationen wie in Paris.";
+  } else if (f === "int") {
+    const W = { bike: it === "hart" ? ["4 Min Zone 4", 180, 7] : it === "mittel" ? ["3 Min Zone 4", 120, 5] : ["2 Min Zone 3", 120, 4], row: it === "locker" ? ["90 s Zone 3", 90, 3] : ["2 Min Zone 4", 90, 3.5], ski: it === "locker" ? ["40 s zügig", 60, 1.7] : ["1 Min hart", 60, 2], run: ["1 km Hyrox Tempo", 90, 6.5] }[cd];
+    const warm = 10, cool = 5; budget -= warm + cool;
+    const n = Math.max(3, Math.min(cd === "ski" ? 10 : 8, Math.floor((budget - 4) / W[2])));
+    blocks.unshift({ title: "Aufwärmen", items: [IT(cex, 1, `${warm} Min einrollen mit 3 × 20 s Antritten`)] });
+    blocks.push({ title: `Intervalle · ${n} ×`, items: [IT(cex, n, W[0], W[1], it === "hart" ? "letzte zwei gleich stark wie die ersten" : null)] });
+    blocks.push({ title: "Ausklang", items: [IT(cex, 1, `${cool} Min ausrollen`)].concat(budget - n * W[2] >= 4 ? [IT("kbswing", 2, "15", 45)] : []) });
+    name = "Intervalle " + CARDIO_N[cd]; type = "endurance"; goal = "Schwelle und Tempohärte, wichtig für Fussball und Hyrox.";
+  } else if (f === "z2") {
+    const warm = 5; budget -= warm;
+    const core = dur >= 60 ? 5 : 0; budget -= core;
+    if (cd === "run") {
+      const ks = S.plan.kneeStages[C.knee];
+      blocks.unshift({ title: "Aufwärmen", items: [IT(null, 1, `${warm} Min zügig gehen`)].map(x => (delete x.ex, x)) });
+      blocks.push({ title: "Laufen · Knie Stufe " + C.knee, items: [IT("treadmill", 1, ks.text + ", Zone 2")] });
+      why.push(`Knie Stufe ${C.knee}: ${ks.name}. Danach locker ${ort === "home" ? "auf der Rolle" : "gehen"}.`);
+      const rest = Math.round(budget - 25); if (rest >= 5) blocks.push({ title: "Ausklang", items: [IT(ort === "home" ? "bike" : null, 1, `${rest} Min ${ort === "home" ? "Zone 2" : "locker gehen"}`)].map(x => (x.ex || delete x.ex, x)) });
+    } else {
+      blocks.unshift({ title: "Aufwärmen", items: [IT(cex, 1, `${warm} Min einrollen, Zone 1`)] });
+      blocks.push({ title: "Grundlage", items: [IT(cex, 1, `${Math.round(budget)} Min Zone 2${cd === "bike" ? ", Kadenz 85 bis 95" : ""}`)] });
+    }
+    if (core) blocks.push({ title: "Rumpf", items: [IT("kbaround", 2, FIXREPS.kbaround, 30)] });
+    name = "Grundlage " + CARDIO_N[cd]; type = "endurance"; goal = "Lockere Ausdauer: Fettstoffwechsel, Erholung und Fussball Basis. Sprechen in ganzen Sätzen muss gehen.";
+  } else {
+    const base = [IT("foamroll", 1, "je Seite 60 s"), IT("hipflexor", 1, "je Seite 45 s"), IT("hamstretch", 1, "je Seite 45 s"), IT("calfstretch", 1, "je Seite 45 s"), IT("openbook", 2, "6 je Seite", 15), IT("copenhagen", 2, "15 s je Seite", 20), IT("childpose", 1, "60 s")];
+    blocks.push({ title: "Ablauf", items: base });
+    if (dur >= 30) blocks.push({ title: "Knie und Hüfte", items: [IT("clamshell", 2, "15 je Seite", 15), IT("lateralwalk", 2, "15 Schritte je Richtung", 15), IT("singlebridge", 2, "10 je Seite", 15), IT("stepdown", 2, "8 je Seite, 3 s runter", 20)] });
+    if (dur >= 45) blocks.unshift({ title: "Locker bewegen", items: [IT(ort === "gym" ? "gymbike" : "bike", 1, `${dur >= 60 ? 20 : 12} Min Zone 1`)] });
+    name = "Mobility"; type = "rest"; goal = "Beweglichkeit und Erholung. Ruhig atmen, nichts erzwingen.";
+  }
+  blocks.forEach(b => b.items.forEach(personalizeItem));
+  if (C.weeks <= 20 && f !== "hyrox" && !why.some(w => /Paris/.test(w))) why.push(`Noch ${C.weeks} Wochen bis Paris.`);
+  const intN = { hart: "hart", mittel: "mittel", locker: "locker" }[it];
+  return { why, s: { name: `${name} · ${dur} Min`, tag: "Vorschlag", type, dur, goal, note: `Intensität ${intN}. Erstellt am ${fmt(now())}.`, blocks, gen: true } };
+}
+function genUI() {
+  const G = S.gen;
+  const grp = (key, label, opts) => `<div class="gq"><p class="block-t">${label}</p><div class="chips wrap">${opts.map(([v, t]) => `<button class="chip" data-g="${key}" data-v="${v}" aria-pressed="${String(G[key]) === String(v)}">${t}</button>`).join("")}</div></div>`;
+  return `<div class="card gen"><div class="card-h"><h3>Worauf hast du Lust?</h3>${S.genOut ? "" : `<span class="pill">Kriterien wählen</span>`}</div>
+    ${grp("dur", "Zeit", [[20, "20 Min"], [30, "30"], [45, "45"], [60, "60"], [75, "75"], [90, "90"]])}
+    ${grp("ort", "Wo", [["gym", "Gym"], ["home", "Zuhause"], ["out", "Draussen"]])}
+    ${grp("fokus", "Fokus", [["auto", "Du entscheidest"], ["beine", "Beine"], ["oben", "Oberkörper"], ["ganz", "Ganzkörper"], ["hyrox", "Hyrox"], ["z2", "Ausdauer locker"], ["int", "Intervalle"], ["mob", "Mobility"]])}
+    ${grp("int", "Intensität", [["auto", "Nach Tagesform"], ["locker", "Locker"], ["mittel", "Mittel"], ["hart", "Hart"]])}
+    ${grp("cardio", "Ausdauer mit", [["auto", "Egal"], ["bike", "Velo"], ["run", "Laufen"], ["row", "Rudern"], ["ski", "SkiErg"]])}
+    ${grp("fav", "Übungen", [["true", "Lieblingsübungen"], ["false", "Abwechslung"]])}
+    <button class="btn accent block" data-gen="new" style="margin-top:4px">${S.genOut ? "Neu berechnen" : "Vorschlag erstellen"}</button>
+    <p class="muted" style="font-size:12.5px;margin-top:8px">Berücksichtigt Erholung, Belastung der letzten Tage aus Garmin, Strava und Tagebuch, morgen Fussball, Knie Stufe und Paris.</p></div>
+    ${S.genOut ? genResult() : ""}`;
+}
+function genResult() {
+  const o = S.genOut, s = o.s;
+  return `<article class="card gen-out t-${s.type}" id="genOut"><span class="eyebrow">Mein Vorschlag</span><h2>${esc(s.name)}</h2><p class="muted" style="margin:4px 0 12px">${esc(s.goal)}</p>
+    <ul class="why">${o.why.map(w => `<li>${esc(w)}</li>`).join("")}</ul>
+    ${s.blocks.map(b => `<div style="margin-top:12px"><p class="block-t">${esc(b.title)}</p><div class="items">${b.items.map(itemRow).join("")}</div></div>`).join("")}
+    <div class="row" style="margin-top:16px"><button class="btn accent grow" data-genstart>${ICON.play} Starten</button><button class="btn ghost" data-gen="again">Anderer Vorschlag</button></div>
+    <button class="btn ghost block" data-genlog style="margin-top:10px">Schon gemacht, eintragen</button></article>`;
+}
+function genRegister() {
+  const k = "v_" + uid(); S.custom[k] = { ...S.genOut.s, created: iso(now()) }; S.plan.sessions[k] = S.custom[k]; saveKey("custom", S.custom); return k;
+}
+
+/* ---------- Strava: direkt aus der App und im Sync ---------- */
+const STV = "https://www.strava.com";
+const stravaDev = x => x.device_name || (/zwift/i.test(x.external_id || "") ? "Zwift" : /whoop/i.test(x.external_id || "") ? "WHOOP" : /garmin/i.test(x.external_id || "") ? "Garmin" : null);
+const mapStrava = x => { const sec = x.moving_time || x.elapsed_time || 0, n = v => v == null ? null : Math.round(v * 10) / 10; return { id: "s" + x.id, date: String(x.start_date_local || "").slice(0, 10), start: String(x.start_date_local || "").slice(0, 16), src: "strava", device: stravaDev(x), type: x.sport_type || x.type, name: x.name, durMin: sec ? Math.round(sec / 60) : null, km: x.distance ? Math.round(x.distance / 10) / 100 : null, avgHr: n(x.average_heartrate), maxHr: n(x.max_heartrate), effort: n(x.suffer_score), watts: n(x.average_watts), elev: n(x.total_elevation_gain) }; };
+const aFam = t => { const g = GTYPE(t); return g === "hyrox" ? "gym" : g; };
+function actDup(a, list) {
+  return list.some(g => g.src !== "strava" && g.date === a.date && aFam(g.type) === aFam(a.type) && (g.start && a.start ? Math.abs(Date.parse(g.start + ":00Z") - Date.parse(a.start + ":00Z")) <= 15 * 60e3 : Math.abs((g.durMin || 0) - (a.durMin || 0)) <= Math.max(5, 0.2 * (a.durMin || 0))));
+}
+async function privPut(path, obj, msg) {
+  if (!S.settings.ghToken) return false;
+  const url = `https://api.github.com/repos/${dataRepo()}/contents/${path}`, h = { Authorization: "Bearer " + S.settings.ghToken, Accept: "application/vnd.github+json" };
+  const r = await fetch(url, { headers: h, cache: "no-store" }); const sha = r.ok ? (await r.json()).sha : undefined;
+  const w = await fetch(url, { method: "PUT", headers: { ...h, "Content-Type": "application/json" }, body: JSON.stringify({ message: msg, content: b64e(JSON.stringify(obj, null, 1) + "\n"), sha }) });
+  return w.ok;
+}
+const tokFresh = t => t && t.access_token && (t.expires_at || 0) * 1000 > Date.now() + 120e3;
+async function stravaToken(code) {
+  const { stravaId: id, stravaSecret: sec } = S.settings; if (!id || !sec) throw new Error("Client ID und Client Secret fehlen");
+  const body = code ? { client_id: id, client_secret: sec, code, grant_type: "authorization_code" } : { client_id: id, client_secret: sec, grant_type: "refresh_token", refresh_token: S.stravaTok.refresh_token };
+  const r = await fetch(STV + "/oauth/token", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error(code ? "Strava hat den Code abgelehnt (" + r.status + ")" : "Strava Token abgelaufen (" + r.status + ")");
+  const j = await r.json();
+  S.stravaTok = { ...(S.stravaTok || {}), athlete: j.athlete ? { id: j.athlete.id } : (S.stravaTok || {}).athlete || null, access_token: j.access_token, refresh_token: j.refresh_token, expires_at: j.expires_at, scope: "read,activity:read_all", updated: new Date().toISOString() };
+  store.set("stravaTok", S.stravaTok);
+  await privPut("strava-token.json", S.stravaTok, code ? "Strava verbunden" : "Strava Token").catch(() => false);
+  return S.stravaTok.access_token;
+}
+async function stravaAccess() {
+  if (tokFresh(S.stravaTok)) return S.stravaTok.access_token;
+  const remote = await privGet("strava-token.json");
+  if (remote && remote.refresh_token) { S.stravaTok = remote; store.set("stravaTok", remote); if (tokFresh(remote)) return remote.access_token; }
+  if (!S.stravaTok || !S.stravaTok.refresh_token) return null;
+  return S.settings.stravaSecret ? stravaToken() : null;
+}
+async function stravaLoad(manual) {
+  try {
+    const tok = await stravaAccess(); if (!tok) { if (manual) toast("Strava ist noch nicht verbunden"); return; }
+    const r = await fetch(`${STV}/api/v3/athlete/activities?after=${Math.floor((Date.now() - 42 * 864e5) / 1000)}&per_page=100`, { headers: { Authorization: "Bearer " + tok } });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    S.stravaLive = j.map(mapStrava); store.set("stravaLive", S.stravaLive); S.settings.stravaLast = new Date().toISOString(); saveSettings();
+    renderAll(); if (manual) toast(j.length + " Strava Aktivitäten geladen");
+  } catch (e) { if (manual) toast("Strava: " + (e.message || e)); }
+}
+function stravaConnect() {
+  const id = ($("#stvId").value || "").trim(), sec = ($("#stvSec").value || "").trim();
+  if (!/^\d+$/.test(id) || !sec) return toast("Bitte Client ID und Client Secret eintragen");
+  S.settings.stravaId = id; S.settings.stravaSecret = sec; saveSettings();
+  const ru = location.origin + location.pathname;
+  location.href = `${STV}/oauth/authorize?client_id=${encodeURIComponent(id)}&redirect_uri=${encodeURIComponent(ru)}&response_type=code&approval_prompt=auto&scope=read,activity:read_all&state=pp27`;
+}
+async function stravaCallback() {
+  const q = new URLSearchParams(location.search); if (q.get("state") !== "pp27") return;
+  history.replaceState(null, "", location.pathname + location.hash);
+  const code = q.get("code"); if (!code) return toast("Strava Verbindung abgebrochen");
+  if (S.settings.stravaId && S.settings.stravaSecret) {
+    try { await stravaToken(code); toast(S.settings.ghToken ? "Strava verbunden" : "Strava verbunden. Für den Sync noch den GitHub Schlüssel eintragen."); stravaLoad(); }
+    catch (e) { toast(e.message); }
+  } else openSheet(`<h2 id="sheetTitle">Fast geschafft</h2><p class="muted">Dieses Fenster kennt deine Strava Zugangsdaten nicht, weil die Verbindung ausserhalb der App geöffnet wurde. Kopiere den Code, öffne die App und füge ihn unter Einstellungen bei Strava ein. Der Code gilt nur ein paar Minuten.</p>
+    <input class="input" readonly id="stvCodeOut" value="${esc(code)}"><button class="btn accent block" id="stvCopy">Code kopieren</button>`);
+}
+function stravaSettings() {
+  const st = S.settings, t = S.stravaTok;
+  return `<div><p class="block-t">Strava</p>
+    <p style="margin-bottom:8px">${t && t.refresh_token ? `<span class="pill good">Verbunden</span>${st.stravaLast ? ` <span class="muted" style="font-size:12.5px">zuletzt ${new Date(st.stravaLast).toLocaleString("de-CH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>` : ""}` : `<span class="pill">Nicht verbunden</span>`}</p>
+    <div class="row"><div class="field" style="flex:1;min-width:120px"><label for="stvId">Client ID</label><input class="input num" id="stvId" inputmode="numeric" value="${esc(st.stravaId || "")}" autocomplete="off"></div>
+    <div class="field" style="flex:2;min-width:160px"><label for="stvSec">Client Secret</label><input class="input" id="stvSec" type="password" value="${esc(st.stravaSecret || "")}" autocomplete="off"></div></div>
+    <div class="row" style="margin-top:10px"><button class="btn primary" data-strava="connect">${t && t.refresh_token ? "Neu verbinden" : "Mit Strava verbinden"}</button>${t && t.refresh_token ? `<button class="btn ghost" data-strava="sync">Jetzt laden</button><button class="btn ghost" data-strava="off">Trennen</button>` : ""}</div>
+    <details style="margin-top:10px"><summary class="muted" style="font-size:13px;cursor:pointer">Code von Hand einfügen</summary><div class="row" style="margin-top:8px"><input class="input" id="stvCode" style="flex:1" autocomplete="off" placeholder="Code aus dem Strava Fenster"><button class="btn ghost" data-strava="code">Verbinden</button></div></details>
+    <p class="muted" style="font-size:12.5px;margin-top:8px">Einmalig: auf strava.com/settings/api eine eigene API App anlegen, bei «Authorization Callback Domain» ${esc(location.host || "jamiro-sys.github.io")} eintragen. Client ID und Secret hier eintragen und zusätzlich als GitHub Secrets STRAVA_CLIENT_ID und STRAVA_CLIENT_SECRET im Repository training speichern. Dann kommen Zwift, Whoop und alle anderen Strava Aktivitäten ins Tagebuch. Doppelte mit Garmin werden zusammengeführt.</p></div>`;
+}
+
+/* ---------- Events Tagebuch und Vorschlag ---------- */
+document.addEventListener("click", async e => {
+  const q = sel => e.target.closest(sel); let b;
+  if ((b = q("[data-entry]"))) { const [d, i] = b.dataset.entry.split("|"); return entrySheet(d, +i); }
+  if ((b = q("[data-note]"))) return noteSheet(b.dataset.note);
+  if ((b = q("[data-addentry]"))) return logSheet(null, b.dataset.addentry);
+  if ((b = q("[data-rate]"))) return logSheet(null, b.dataset.date, b.dataset.rate);
+  if (q("[data-more]")) { S.feedDays += 21; return renderHeute(); }
+  if (q("[data-genopen]")) { S.planMode = "vorschlag"; if (location.hash === "#plan") renderPlan(); else location.hash = "plan"; return; }
+  if ((b = q("[data-g]"))) {
+    const k = b.dataset.g, v = b.dataset.v; S.gen[k] = k === "dur" ? +v : k === "fav" ? v === "true" : v;
+    const { ort, ...keep } = S.gen; S.settings.gen = keep; saveSettings();
+    if (S.genOut) { S.genOut = generate(); }
+    const y = window.scrollY; renderPlan(); window.scrollTo(0, y); return;
+  }
+  if ((b = q("[data-gen]"))) {
+    S.genSeed = b.dataset.gen === "again" ? (S.genSeed || 0) + 1 : 0; S.genOut = generate(); renderPlan();
+    const o = $("#genOut"); if (o) setTimeout(() => o.scrollIntoView({ behavior: "smooth", block: "start" }), 60); return;
+  }
+  if (q("[data-genstart]") && S.genOut) return startPlayer(genRegister(), iso(now()));
+  if (q("[data-genlog]") && S.genOut) return logSheet(genRegister(), iso(now()));
+  if ((b = q("[data-strava]"))) {
+    const a = b.dataset.strava;
+    if (a === "connect") return stravaConnect();
+    if (a === "sync") return stravaLoad(true);
+    if (a === "off") { S.stravaTok = null; S.stravaLive = []; store.set("stravaTok", null); store.set("stravaLive", []); renderAll(); settingsSheet(); return toast("Strava in der App getrennt"); }
+    if (a === "code") {
+      const c = ($("#stvCode").value || "").trim().replace(/^.*[?&]code=([^&]+).*$/, "$1"); if (!c) return toast("Bitte Code einfügen");
+      S.settings.stravaId = ($("#stvId").value || "").trim(); S.settings.stravaSecret = ($("#stvSec").value || "").trim(); saveSettings();
+      try { await stravaToken(c); toast("Strava verbunden"); await stravaLoad(); settingsSheet(); } catch (err) { toast(err.message); }
+      return;
+    }
+  }
+  if (q("#stvCopy")) { const v = $("#stvCodeOut").value; try { await navigator.clipboard.writeText(v); toast("Code kopiert"); } catch { $("#stvCodeOut").select(); } }
+});
+
 /* ---------- Navigation ---------- */
 const VIEWS = ["heute", "plan", "uebungen", "fortschritt"];
 function route() {
@@ -1181,7 +1549,7 @@ function route() {
 }
 window.addEventListener("hashchange", route);
 function applyTheme() { document.documentElement.setAttribute("data-theme", "dark"); }
-function renderAll() { _dayCache.clear(); renderHeute(); renderPlan(); renderUebungen(); renderFortschritt(); countUp($("#v-heute")); scanAnim($("#v-heute")); }
+function renderAll() { _dayCache.clear(); _acts = null; renderHeute(); renderPlan(); renderUebungen(); renderFortschritt(); countUp($("#v-heute")); scanAnim($("#v-heute")); }
 
 /* ---------- Start ---------- */
 /* Persönliche Daten liegen im privaten Repository und werden mit dem eigenen Schlüssel gelesen */
@@ -1196,11 +1564,7 @@ async function privGet(path) {
 /* Persönliche Zonen und Tempi aus profil.json in die Texte einsetzen */
 function applyProfile() {
   const pr = S.profile; if (!pr || !S.plan || S.plan._personal) return;
-  Object.values(S.plan.sessions).forEach(s => s.blocks.forEach(b => b.items.forEach(it => {
-    const bike = it.ex === "bike" || it.ex === "gymbike", map = (bike && pr.bikeHf) || pr.zoneHf;
-    it.reps = it.reps.replace(/Zone (\d)\b(?! \()/g, (m, z) => map && map[z] ? `${m} (Puls ${map[z]})` : m);
-    Object.entries(pr.paceMap || {}).forEach(([k, v]) => { it.reps = it.reps.replace(k, `${k} ${v}`); });
-  })));
+  Object.values(S.plan.sessions).forEach(s => s.gen || s.blocks.forEach(b => b.items.forEach(personalizeItem)));
   S.plan._personal = true;
 }
 function zonesCard() {
@@ -1227,11 +1591,14 @@ async function load(path, fallback) { try { const r = await fetch(path, { cache:
   S.profile = profile;
   privGet("garmin-history.json").then(h => { S.history = h; if (h && S.plan) renderAll(); });
   if (!plan) { $("#v-heute").innerHTML = `<div class="empty"><b>Plan konnte nicht geladen werden.</b><span>Prüfe die Internetverbindung und lade die Seite neu.</span></div>`; return; }
-  S.plan = plan; S.garmin = garmin; S.coach = coach; applyProfile();
+  S.plan = plan; S.garmin = garmin; S.coach = coach; applyProfile(); registerSessions(); pruneCustom();
+  S.gen = Object.assign({}, GEN_DEF, S.settings.gen || {}); S.gen.ort = ["gym", "hyrox"].includes((sess(sessionsFor(now())[0] || "ruhe") || {}).type) ? "gym" : "home";
   window.ExPhotos = {};
   if (S.settings.kneeStage >= plan.kneeStages.length) S.settings.kneeStage = 1;
   renderAll(); route();
   if (S.settings.ghToken) ghSync().then(renderAll).catch(() => {});
+  stravaCallback().catch(() => {});
+  if (S.stravaTok || S.settings.ghToken) stravaLoad().catch(() => {});
   if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 })();
 })();

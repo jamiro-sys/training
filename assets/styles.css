@@ -589,3 +589,57 @@ h1,h2,h3,h4{font-family:var(--f-display);font-weight:700;letter-spacing:-.005em}
 @media (max-width:420px){.stretch{flex-wrap:wrap}.stretch .st-act{flex-direction:row;width:100%}.stretch .st-act .btn{flex:1}}
 
 .thumb-anim .anim-note,.st-ic .anim-note,.anim-mini .anim-note{display:none}
+
+/* ---------- Tagebuch ---------- */
+.jstack{display:flex;flex-direction:column;gap:14px}
+.row .grow{flex:1}
+.wish{all:unset;box-sizing:border-box;cursor:pointer;border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;align-items:center;gap:14px;background:linear-gradient(120deg,color-mix(in srgb,var(--accent) 20%,var(--surface)),var(--surface) 72%);transition:transform .18s var(--ease)}
+.wish:active{transform:scale(.985)}
+.wish:focus-visible{outline:2px solid var(--accent)}
+.wish>div{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0}
+.wish b{font:800 24px/1.08 var(--f-display);letter-spacing:-.01em}
+.wish .muted{font-size:13px}
+.wish-go{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--fg);color:var(--bg);flex:none}
+.wish-go svg{width:20px;height:20px}
+.plan-today{display:flex;align-items:center;gap:12px;padding-top:14px;padding-bottom:14px}
+.plan-today .bar{width:4px;align-self:stretch;border-radius:4px;background:var(--c);flex:none}
+.plan-today .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.plan-today b{font:700 17px/1.2 var(--f-display)}
+.plan-today .muted{font-size:12.5px}
+.journal{display:flex;flex-direction:column}
+.jweek{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:14px 4px 10px;font-size:12px;color:var(--muted)}
+.jweek:first-child{margin-top:4px}
+.jweek b{color:var(--fg);font:800 13px/1 var(--f-display);letter-spacing:.08em;text-transform:uppercase}
+.jday{display:grid;grid-template-columns:40px 1fr;gap:12px;padding:14px 14px 10px;border-radius:var(--r);background:var(--surface);border:1px solid var(--line);margin-bottom:10px;animation:rise .35s var(--ease) both}
+.jday.today{border-color:color-mix(in srgb,var(--accent) 50%,var(--line));box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 10%,transparent)}
+.jd{display:flex;flex-direction:column;align-items:center;gap:3px;padding-top:2px}
+.jd b{font:800 24px/1 var(--f-display)}
+.jd span{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.jday.today .jd span{color:var(--accent)}
+.jbody{min-width:0;display:flex;flex-direction:column;gap:8px}
+.jmet{display:flex;flex-wrap:wrap;gap:6px}
+.jmet span{font-size:11.5px;color:var(--muted);background:var(--surface-2);border-radius:99px;padding:4px 9px}
+.jmet b{color:var(--fg);font-weight:700;margin-left:2px}
+.jentry .src{font:700 10px/1 var(--f-body);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding:5px 7px;border-radius:6px;background:color-mix(in srgb,var(--bg) 40%,transparent);flex:none;white-space:nowrap}
+.jlight{display:flex;flex-wrap:wrap;gap:6px}
+.jnote{all:unset;cursor:pointer;font-size:14px;line-height:1.45;color:var(--fg);white-space:pre-wrap;word-break:break-word;border-left:2px solid var(--accent);padding:2px 0 2px 10px}
+.jrest{font-size:13px;color:var(--muted)}
+.jfoot{display:flex;flex-wrap:wrap;gap:14px;margin-top:2px}
+.jadd{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;color:var(--muted);padding:4px 0}
+.jadd:hover{color:var(--fg)}
+.jadd:focus-visible{outline:2px solid var(--accent);border-radius:4px}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ---------- Vorschlag ---------- */
+.chips.wrap{flex-wrap:wrap;overflow:visible;margin-bottom:6px}
+.gen .gq{margin-bottom:6px}
+.gen .block-t{margin-bottom:8px}
+.gen-out{border-color:color-mix(in srgb,var(--c) 45%,var(--line));background:linear-gradient(160deg,color-mix(in srgb,var(--c) 12%,var(--surface)),var(--surface) 55%);animation:rise .4s var(--ease) both;scroll-margin-top:16px}
+.gen-out .eyebrow{color:var(--c)}
+.gen-out h2{font:800 28px/1.05 var(--f-display);letter-spacing:-.015em;margin-top:6px}
+.why{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:7px}
+.why li{position:relative;padding-left:16px;font-size:13.5px;line-height:1.4;color:var(--muted)}
+.why li::before{content:"";position:absolute;left:0;top:.5em;width:6px;height:6px;border-radius:50%;background:var(--c,var(--accent))}
+#v-plan .gen-out{margin-top:14px}
+#v-heute>.head{flex-wrap:nowrap;align-items:flex-end}#v-heute>.head>div:first-child{min-width:0;flex:1}
+.gen .chip{height:32px;line-height:32px;padding:0 12px;font-size:12.5px}.gen .chips.wrap{gap:6px}
